@@ -120,7 +120,7 @@ export default function DocumentsPage() {
               <div className="relative">
                 <input
                   type="file"
-                  accept="image/*,.pdf"
+                  accept="image/*,.heic,.heif,.pdf,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.tif"
                   id={doc.key}
                   className="sr-only"
                   onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] ?? null)}

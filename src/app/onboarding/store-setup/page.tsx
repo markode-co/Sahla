@@ -19,20 +19,36 @@ export default function StoreSetupPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  // If store already exists, skip to next step
+  // If user already has a store, skip to the right step
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      supabase
+
+      const { data: store } = await supabase
         .from("stores")
         .select("id")
         .eq("user_id", user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) router.replace("/onboarding/payment");
-        });
-    });
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!store) return;
+
+      // Has a store — check if subscription is also active
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (subscription?.status === "active") {
+        router.replace("/dashboard/merchant");
+      } else {
+        router.replace("/onboarding/payment");
+      }
+    })();
   }, [router]);
 
   useEffect(() => {

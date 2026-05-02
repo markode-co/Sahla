@@ -80,7 +80,7 @@ export async function middleware(request: NextRequest) {
 
   // ── Merchant dashboard: check store + subscription ───────────────────────────
   if (pathname.startsWith("/dashboard/merchant") && role === "merchant") {
-    const { data: store } = await supabase
+    const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id")
       .eq("user_id", user.id)
@@ -88,17 +88,19 @@ export async function middleware(request: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    if (!store) {
+    // Only redirect if there is definitively no store (not on query error)
+    if (!storeError && !store) {
       return NextResponse.redirect(new URL("/onboarding/store-setup", request.url));
     }
 
-    const { data: subscription } = await supabase
+    const { data: subscription, error: subError } = await supabase
       .from("subscriptions")
       .select("status")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (!subscription || subscription.status !== "active") {
+    // Only redirect if there is definitively no active subscription (not on query error)
+    if (!subError && (!subscription || subscription.status !== "active")) {
       return NextResponse.redirect(new URL("/onboarding/subscription", request.url));
     }
   }
