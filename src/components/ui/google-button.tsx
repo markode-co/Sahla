@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
@@ -9,7 +9,7 @@ interface GoogleButtonProps {
   label?: string;
 }
 
-export function GoogleButton({ label = "المتابعة بحساب جوجل" }: GoogleButtonProps) {
+function GoogleButtonInner({ label = "المتابعة بحساب جوجل" }: GoogleButtonProps) {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +36,6 @@ export function GoogleButton({ label = "المتابعة بحساب جوجل" }:
       toast.error("فشل الاتصال بجوجل، يرجى المحاولة مجدداً");
       setLoading(false);
     }
-    // On success the browser redirects — no need to setLoading(false)
   }
 
   return (
@@ -53,6 +52,23 @@ export function GoogleButton({ label = "المتابعة بحساب جوجل" }:
       )}
       {loading ? "جاري الاتصال..." : label}
     </button>
+  );
+}
+
+export function GoogleButton(props: GoogleButtonProps) {
+  return (
+    <Suspense fallback={
+      <button
+        type="button"
+        disabled
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-700 font-medium text-sm opacity-60 cursor-not-allowed shadow-sm"
+      >
+        <GoogleIcon />
+        {props.label ?? "المتابعة بحساب جوجل"}
+      </button>
+    }>
+      <GoogleButtonInner {...props} />
+    </Suspense>
   );
 }
 
