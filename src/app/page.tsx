@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ShoppingBag, Zap, Shield, BarChart3, ArrowLeft, Check } from "lucide-react";
+import { ShoppingBag, Zap, Shield, BarChart3, ArrowLeft, Check, LayoutDashboard } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
 const features = [
   {
@@ -46,7 +47,23 @@ const plans = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let dashboardHref = "/dashboard/merchant";
+  let isLoggedIn = false;
+
+  if (user) {
+    isLoggedIn = true;
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    dashboardHref = profile?.role === "admin" ? "/dashboard/admin" : "/dashboard/merchant";
+  }
+
   return (
     <div className="min-h-screen bg-white" dir="rtl">
       {/* Navbar */}
@@ -58,16 +75,29 @@ export default function LandingPage() {
             </div>
             <span className="text-xl font-bold text-gray-900">سهلة</span>
           </div>
+
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-            >
-              تسجيل الدخول
-            </Link>
-            <Link href="/register" className="btn-primary text-sm">
-              ابدأ مجاناً
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href={dashboardHref}
+                className="btn-primary text-sm flex items-center gap-2"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                لوحة التحكم
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                >
+                  تسجيل الدخول
+                </Link>
+                <Link href="/register" className="btn-primary text-sm">
+                  ابدأ مجاناً
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -88,19 +118,31 @@ export default function LandingPage() {
             منصة سهلة تتيح للتجار إنشاء متاجر إلكترونية احترافية في دقائق، مع إدارة كاملة للمنتجات والطلبات والمدفوعات
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/register"
-              className="btn-primary flex items-center justify-center gap-2 text-base px-8 py-3"
-            >
-              ابدأ مجاناً الآن
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/login"
-              className="btn-secondary flex items-center justify-center gap-2 text-base px-8 py-3"
-            >
-              تسجيل الدخول
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href={dashboardHref}
+                className="btn-primary flex items-center justify-center gap-2 text-base px-8 py-3"
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                اذهب إلى لوحة التحكم
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/register"
+                  className="btn-primary flex items-center justify-center gap-2 text-base px-8 py-3"
+                >
+                  ابدأ مجاناً الآن
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="btn-secondary flex items-center justify-center gap-2 text-base px-8 py-3"
+                >
+                  تسجيل الدخول
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -158,14 +200,14 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <Link
-                  href="/register"
+                  href={isLoggedIn ? dashboardHref : "/register"}
                   className={`block text-center py-2.5 px-5 rounded-xl font-semibold transition-all ${
                     plan.popular
                       ? "bg-primary-600 text-white hover:bg-primary-700"
                       : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                   }`}
                 >
-                  ابدأ الآن
+                  {isLoggedIn ? "لوحة التحكم" : "ابدأ الآن"}
                 </Link>
               </div>
             ))}

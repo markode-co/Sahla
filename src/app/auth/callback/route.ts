@@ -5,7 +5,8 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard/merchant";
+  const next = searchParams.get("next");
+  const safeNext = next && next.startsWith("/") ? next : "/dashboard/merchant";
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
     .from("stores")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!store) {
     return NextResponse.redirect(`${origin}/onboarding/store-setup`);
@@ -84,5 +85,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/onboarding/subscription`);
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  return NextResponse.redirect(`${origin}${safeNext}`);
 }

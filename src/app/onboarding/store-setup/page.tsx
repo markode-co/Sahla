@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Store, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
@@ -16,6 +16,32 @@ export default function StoreSetupPage() {
     description: "",
   });
   const [slugManual, setSlugManual] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  // If store already exists, skip to next step
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("stores")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) router.replace("/onboarding/payment");
+        });
+    });
+  }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview]);
 
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     const name = e.target.value;
@@ -49,37 +75,84 @@ export default function StoreSetupPage() {
       .from("stores")
       .select("id")
       .eq("slug", form.slug)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       toast.error("هذا الرابط مستخدم بالفعل، جرب رابطاً آخر");
       setLoading(false);
       return;
     }
+const logoInitials = generateLogoInitials(form.name);
+const logoColor = generateLogoColor();
 
-    const logoInitials = generateLogoInitials(form.name);
-    const logoColor = generateLogoColor();
+let logoUrl: string | null = null;
 
-    const { error } = await supabase.from("stores").insert({
-      user_id: user.id,
-      name: form.name,
-      slug: form.slug,
-      description: form.description || null,
-      logo_initials: logoInitials,
-      logo_color: logoColor,
-      status: "pending",
+let uploadedPath: string | null = null;
+
+if (logoFile && logoFile.size > 0) {
+  const ext = logoFile.name.split(".").pop() ?? "png";
+
+  const filePath = `${user.id}/logo-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("store-logos")
+    .upload(filePath, logoFile, {
+      upsert: true,
+      cacheControl: "3600",
     });
 
-    if (error) {
-      toast.error("حدث خطأ، يرجى المحاولة مجدداً");
-      setLoading(false);
-      return;
-    }
-
-    toast.success("تم إنشاء المتجر!");
-    router.push("/onboarding/payment");
+  if (uploadError) {
+    console.error(uploadError);
+    toast.error("فشل تحميل الشعار");
+    setLoading(false);
+    return;
   }
 
+  uploadedPath = filePath;
+
+  const { data } = supabase.storage
+    .from("store-logos")
+    .getPublicUrl(filePath);
+
+  logoUrl = data.publicUrl;
+}
+
+// insert store
+const { error } = await supabase.from("stores").insert({
+  user_id: user.id,
+  name: form.name,
+  slug: form.slug,
+  description: form.description || null,
+  logo_url: logoUrl,
+  logo_initials: logoInitials,
+  logo_color: logoColor,
+  status: "pending",
+});
+
+// rollback if failed
+if (error) {
+  if (uploadedPath) {
+    await supabase.storage.from("store-logos").remove([uploadedPath]);
+  }
+  console.error("Store insert error:", error);
+
+  if (error.code === "23503") {
+    toast.error("لم يتم العثور على حسابك، يرجى تسجيل الخروج والدخول مجدداً");
+  } else if (error.code === "23505") {
+    toast.error("هذا الرابط مستخدم بالفعل، جرب رابطاً آخر");
+  } else {
+    toast.error(`خطأ: ${error.message}`);
+  }
+  setLoading(false);
+  return;
+}
+toast.success("تم إنشاء المتجر بنجاح 🚀");
+
+router.push("/onboarding/payment");
+return;
+}
   return (
     <div className="max-w-lg mx-auto">
       <div className="card p-8">
@@ -94,24 +167,51 @@ export default function StoreSetupPage() {
         </div>
 
         {/* Logo Preview */}
-        {form.name && (
-          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl mb-6">
+        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl mb-6">
+          {logoPreview ? (
+            <img
+              src={logoPreview}
+              alt="عرض الشعار"
+              className="w-14 h-14 rounded-2xl object-cover shadow-sm"
+            />
+          ) : (
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-sm"
-              style={{ backgroundColor: "#0ea5e9" }}
+              style={{ backgroundColor: form.name ? "#0ea5e9" : "#cbd5e1" }}
             >
-              {generateLogoInitials(form.name) || "?"}
+              {form.name ? generateLogoInitials(form.name) || "?" : "ش"}
             </div>
-            <div>
-              <p className="font-semibold text-gray-900">{form.name}</p>
-              <p className="text-sm text-gray-400">
-                سيتم توليد الشعار تلقائياً
-              </p>
-            </div>
+          )}
+          <div>
+            <p className="font-semibold text-gray-900">{form.name || "شعار المتجر"}</p>
+            <p className="text-sm text-gray-400">
+              {logoPreview
+                ? "سيتم استخدام الصورة المرفوعة كشعار المتجر"
+                : "يمكنك رفع شعار واستخدامه بدل الأيقونة الافتراضية"}
+            </p>
           </div>
-        )}
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="label">شعار المتجر (اختياري)</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="file-input"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                if (!file) {
+                  setLogoFile(null);
+                  setLogoPreview(null);
+                  return;
+                }
+                setLogoFile(file);
+                setLogoPreview(URL.createObjectURL(file));
+              }}
+            />
+          </div>
+
           <div>
             <label className="label">اسم المتجر *</label>
             <input

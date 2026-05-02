@@ -288,8 +288,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
   type text NOT NULL CHECK (type IN ('national_id', 'commercial_register', 'tax_card')),
   file_url text NOT NULL,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  created_at timestamptz DEFAULT now(),
-  CONSTRAINT documents_user_type_key UNIQUE (user_id, type)
+  created_at timestamptz DEFAULT now()
 );
 
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;

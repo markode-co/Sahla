@@ -25,7 +25,9 @@ export default async function DashboardLayout({
     .from("stores")
     .select("*")
     .eq("user_id", user.id)
-    .single();
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   const userInitials = generateLogoInitials(profile.full_name ?? profile.email);
 

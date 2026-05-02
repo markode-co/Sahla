@@ -65,14 +65,22 @@ export default function SubscriptionPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    // In production, integrate with payment gateway here
-    // For now, directly activate subscription
-    const { error } = await supabase.from("subscriptions").upsert({
-      user_id: user.id,
+    // Check if subscription already exists
+    const { data: existing } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const payload = {
       plan: selected,
-      status: "active",
+      status: "active" as const,
       started_at: new Date().toISOString(),
-    });
+    };
+
+    const { error } = existing
+      ? await supabase.from("subscriptions").update(payload).eq("user_id", user.id)
+      : await supabase.from("subscriptions").insert({ user_id: user.id, ...payload });
 
     if (error) {
       toast.error("حدث خطأ، يرجى المحاولة مجدداً");

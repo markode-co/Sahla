@@ -53,7 +53,9 @@ function LoginForm() {
       if (profile?.role === "admin") {
         router.push("/dashboard/admin");
       } else {
-        router.push("/dashboard/merchant");
+        const next = searchParams.get("next");
+        const safeNext = next && next.startsWith("/") ? next : "/dashboard/merchant";
+        router.push(safeNext);
       }
     }
 

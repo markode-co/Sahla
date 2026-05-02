@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -9,16 +10,21 @@ interface GoogleButtonProps {
 }
 
 export function GoogleButton({ label = "المتابعة بحساب جوجل" }: GoogleButtonProps) {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
 
   async function handleGoogleSignIn() {
     setLoading(true);
     const supabase = createClient();
 
+    const next = searchParams.get("next");
+    const safeNext = next && next.startsWith("/") ? `?next=${encodeURIComponent(next)}` : "";
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback${safeNext}`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback`,
+        redirectTo,
         queryParams: {
           access_type: "offline",
           prompt: "consent",

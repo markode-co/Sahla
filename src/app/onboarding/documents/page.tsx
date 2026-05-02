@@ -65,11 +65,12 @@ export default function DocumentsPage() {
         return;
       }
 
-      const { data: { publicUrl } } = supabase.storage
+      // Generate a long-lived signed URL (10 years) for admin viewing
+      const { data: signedData } = await supabase.storage
         .from("documents")
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 315360000);
 
-      uploadedDocs.push({ type: doc.key, file_url: publicUrl });
+      uploadedDocs.push({ type: doc.key, file_url: signedData?.signedUrl ?? filePath });
       setUploaded((prev) => ({ ...prev, [doc.key]: true }));
     }
 
@@ -80,7 +81,7 @@ export default function DocumentsPage() {
         type: doc.type,
         file_url: doc.file_url,
         status: "pending",
-      });
+      }, { onConflict: "user_id,type" });
     }
 
     toast.success("تم رفع المستندات بنجاح!");

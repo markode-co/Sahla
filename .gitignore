@@ -29,3 +29,5 @@ yarn-error.log*
 
 # Nested directory artifact
 /sahla/
+
+.vercel

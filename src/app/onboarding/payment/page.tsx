@@ -35,7 +35,9 @@ export default function PaymentSetupPage() {
       .from("stores")
       .select("id")
       .eq("user_id", user.id)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!store) {
       toast.error("لم يتم العثور على المتجر");
@@ -50,7 +52,7 @@ export default function PaymentSetupPage() {
       bank_account_number: form.bankAccountNumber || null,
       bank_account_name: form.bankAccountName || null,
       cash_on_delivery: form.cashOnDelivery,
-    });
+    }, { onConflict: "store_id" });
 
     if (error) {
       toast.error("حدث خطأ، يرجى المحاولة مجدداً");

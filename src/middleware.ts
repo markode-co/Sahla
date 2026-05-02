@@ -84,7 +84,9 @@ export async function middleware(request: NextRequest) {
       .from("stores")
       .select("id")
       .eq("user_id", user.id)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!store) {
       return NextResponse.redirect(new URL("/onboarding/store-setup", request.url));
@@ -106,6 +108,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

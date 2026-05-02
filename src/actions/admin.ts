@@ -46,12 +46,18 @@ export async function updateSubscription(
   status: string
 ) {
   const supabase = await createClient();
-  const { error } = await supabase.from("subscriptions").upsert({
-    user_id: userId,
-    plan,
-    status,
-    started_at: new Date().toISOString(),
-  });
+
+  const { data: existing } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const payload = { plan, status, started_at: new Date().toISOString() };
+
+  const { error } = existing
+    ? await supabase.from("subscriptions").update(payload).eq("user_id", userId)
+    : await supabase.from("subscriptions").insert({ user_id: userId, ...payload });
 
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin/subscriptions");

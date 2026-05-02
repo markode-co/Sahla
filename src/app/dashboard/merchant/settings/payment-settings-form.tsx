@@ -36,7 +36,7 @@ export function PaymentSettingsForm({
       bank_account_number: form.bankAccountNumber || null,
       bank_account_name: form.bankAccountName || null,
       cash_on_delivery: form.cashOnDelivery,
-    });
+    }, { onConflict: "store_id" });
 
     if (error) {
       toast.error("حدث خطأ أثناء الحفظ");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Store } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -23,17 +23,49 @@ export function StoreSettingsForm({
     fullName: profile?.full_name ?? "",
     phone: profile?.phone ?? "",
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(store.logo_url ?? null);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview && logoFile) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview, logoFile]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     const supabase = createClient();
 
+    let logoUrl = store.logo_url;
+    if (logoFile && logoFile.size > 0) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const ext = logoFile.name.split(".").pop() ?? "png";
+      const filePath = `${currentUser?.id ?? store.user_id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("store-logos")
+        .upload(filePath, logoFile, { upsert: true });
+
+      if (uploadError) {
+        toast.error("فشل تحميل الشعار، يرجى المحاولة لاحقاً");
+        setSaving(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("store-logos")
+        .getPublicUrl(filePath);
+      logoUrl = publicUrl;
+    }
+
     const [storeUpdate, profileUpdate] = await Promise.all([
       supabase.from("stores").update({
         name: form.name,
         description: form.description || null,
         logo_initials: generateLogoInitials(form.name),
+        logo_url: logoUrl,
       }).eq("id", store.id),
       supabase.from("users").update({
         full_name: form.fullName,
@@ -78,6 +110,44 @@ export function StoreSettingsForm({
               readOnly
             />
           </div>
+        </div>
+
+        <div>
+          <label className="label">شعار المتجر (اختياري)</label>
+          <div className="flex flex-wrap items-center gap-4">
+            {logoPreview ? (
+              <img
+                src={logoPreview}
+                alt="شعار المتجر"
+                className="w-16 h-16 rounded-2xl object-cover shadow-sm"
+              />
+            ) : (
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-sm"
+                style={{ backgroundColor: store.logo_color ?? "#0ea5e9" }}
+              >
+                {store.logo_initials ?? store.name.slice(0, 2)}
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="file-input w-full max-w-xs"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                if (!file) {
+                  setLogoFile(null);
+                  setLogoPreview(store.logo_url ?? null);
+                  return;
+                }
+                setLogoFile(file);
+                setLogoPreview(URL.createObjectURL(file));
+              }}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            يمكنك رفع صورة لشعار متجرك ليظهر في صفحات المتجر ولوحة التحكم.
+          </p>
         </div>
 
         <div>
