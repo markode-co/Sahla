@@ -23,8 +23,9 @@ export default function StoreSetupPage() {
   useEffect(() => {
     const supabase = createClient();
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       const { data: store } = await supabase
         .from("stores")
@@ -78,13 +79,14 @@ export default function StoreSetupPage() {
     setLoading(true);
     const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
       setLoading(false);
       toast.error("انتهت جلستك، يرجى تسجيل الدخول من جديد");
       router.push("/login");
       return;
     }
+    const user = session.user;
 
     // Check slug uniqueness
     const { data: existing } = await supabase
