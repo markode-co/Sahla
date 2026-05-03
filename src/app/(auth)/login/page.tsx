@@ -45,6 +45,14 @@ function LoginForm() {
     }
 
     if (data.user) {
+      if (data.session) {
+        await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session: data.session }),
+        });
+      }
+
       const { data: profile } = await supabase
         .from("users")
         .select("role")

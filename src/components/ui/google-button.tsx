@@ -19,7 +19,7 @@ function GoogleButtonInner({ label = "المتابعة بحساب جوجل" }: G
 
     const next = searchParams.get("next");
     const safeNext = next && next.startsWith("/") ? `?next=${encodeURIComponent(next)}` : "";
-    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback${safeNext}`;
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/api/auth/callback${safeNext}`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

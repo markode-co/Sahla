@@ -14,11 +14,6 @@ export default async function AdminDashboard() {
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) redirect("/login");
 
-  if (user.email !== SUPER_ADMIN_EMAIL) {
-    const { data: profile } = await authClient.from("users").select("role").eq("id", user.id).single();
-    if (profile?.role !== "admin") redirect("/dashboard/merchant");
-  }
-
   const supabase = createAdminClient();
   const stats = await getAdminStats();
 

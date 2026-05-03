@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
@@ -55,15 +56,34 @@ export async function middleware(request: NextRequest) {
 
   // ── Logged in ────────────────────────────────────────────────────────────────
 
-  // Fetch profile — default to "merchant" if trigger hasn't fired yet
-  const { data: profile } = await supabase
+  // Super admin can access everything
+  const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
+  if (isSuperAdmin && pathname.startsWith("/dashboard/admin")) {
+    return supabaseResponse;
+  }
+
+  // Fetch profile using admin client to bypass RLS
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+
+  const { data: profile } = await adminClient
     .from("users")
     .select("role")
     .eq("id", user.id)
     .single();
 
-  const role = profile?.role ?? "merchant";
-  const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
+  // If no profile, redirect to onboarding to complete setup
+  if (!profile) {
+    if (!pathname.startsWith("/onboarding")) {
+      return NextResponse.redirect(new URL("/onboarding/store-setup", request.url));
+    }
+    return supabaseResponse;
+  }
+
+  const role = profile.role;
 
   // Already logged in → redirect away from auth pages
   if (pathname === "/login" || pathname === "/register") {
@@ -78,16 +98,16 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Role guards ──────────────────────────────────────────────────────────────
-  if (pathname.startsWith("/dashboard/admin") && role !== "admin" && !isSuperAdmin) {
+  if (pathname.startsWith("/dashboard/admin") && role !== "admin") {
     return NextResponse.redirect(new URL("/dashboard/merchant", request.url));
   }
 
-  if (pathname.startsWith("/dashboard/merchant") && role === "admin" && !isSuperAdmin) {
+  if (pathname.startsWith("/dashboard/merchant") && role === "admin") {
     return NextResponse.redirect(new URL("/dashboard/admin", request.url));
   }
 
   // ── Merchant dashboard: check store + subscription ───────────────────────────
-  if (pathname.startsWith("/dashboard/merchant") && role === "merchant" && !isSuperAdmin) {
+  if (pathname.startsWith("/dashboard/merchant") && role === "merchant") {
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id")
@@ -126,6 +146,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

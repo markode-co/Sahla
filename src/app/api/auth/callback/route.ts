@@ -58,32 +58,33 @@ export async function GET(request: NextRequest) {
   }
 
   const role = profile?.role ?? "merchant";
+  let redirectPath = safeNext;
 
   if (role === "admin") {
-    return NextResponse.redirect(`${origin}/dashboard/admin`);
+    redirectPath = "/dashboard/admin";
+  } else {
+    // Check if merchant already has a store
+    const { data: store } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!store) {
+      redirectPath = "/onboarding/store-setup";
+    } else {
+      // Check subscription
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!subscription || subscription.status !== "active") {
+        redirectPath = "/onboarding/subscription";
+      }
+    }
   }
 
-  // Check if merchant already has a store
-  const { data: store } = await supabase
-    .from("stores")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!store) {
-    return NextResponse.redirect(`${origin}/onboarding/store-setup`);
-  }
-
-  // Check subscription
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("status")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!subscription || subscription.status !== "active") {
-    return NextResponse.redirect(`${origin}/onboarding/subscription`);
-  }
-
-  return NextResponse.redirect(`${origin}${safeNext}`);
+  return NextResponse.redirect(`${origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`);
 }
