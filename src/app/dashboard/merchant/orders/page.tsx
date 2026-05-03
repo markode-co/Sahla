@@ -24,12 +24,38 @@ export default async function MerchantOrdersPage() {
     .eq("store_id", store.id)
     .order("created_at", { ascending: false });
 
+  const sortedOrders = (orders ?? []).slice().sort((a, b) => {
+    const orderRank = (status: string) => {
+      switch (status) {
+        case "pending":
+          return 0;
+        case "approved":
+          return 1;
+        case "delivered":
+          return 2;
+        case "rejected":
+          return 3;
+        case "cancelled":
+          return 4;
+        default:
+          return 5;
+      }
+    };
+    const rank = orderRank(a.status) - orderRank(b.status);
+    return rank !== 0 ? rank : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   const statusVariantMap: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
     pending: "warning",
     approved: "success",
     rejected: "danger",
     cancelled: "default",
     delivered: "info",
+  };
+
+  const getReceiptImage = (url: string | null | undefined) => {
+    if (!url) return false;
+    return /\.(jpe?g|png|gif|webp|avif)$/i.test(url);
   };
 
   return (
@@ -47,7 +73,7 @@ export default async function MerchantOrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {sortedOrders.map((order) => (
             <div key={order.id} className="card p-6">
               <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
                 <div>
@@ -88,15 +114,24 @@ export default async function MerchantOrdersPage() {
                   طريقة الدفع: <span className="font-medium text-gray-700">{getPaymentMethodLabel(order.payment_method)}</span>
                 </span>
                 {order.payments?.[0]?.receipt_url && (
-                  <a
-                    href={order.payments[0].receipt_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700"
-                  >
-                    <Receipt className="w-4 h-4" />
-                    عرض الإيصال
-                  </a>
+                  <div className="space-y-2">
+                    <a
+                      href={order.payments[0].receipt_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700"
+                    >
+                      <Receipt className="w-4 h-4" />
+                      عرض الإيصال
+                    </a>
+                    {getReceiptImage(order.payments[0].receipt_url) && (
+                      <img
+                        src={order.payments[0].receipt_url}
+                        alt="إيصال الدفع"
+                        className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                      />
+                    )}
+                  </div>
                 )}
               </div>
 

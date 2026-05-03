@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { StatsCard } from "@/components/ui/stats-card";
 import { Users, ShoppingCart, CreditCard, Clock, TrendingUp } from "lucide-react";
 import { getAdminStats } from "@/actions/admin";
@@ -7,26 +7,41 @@ import { formatCurrency, formatDate, getOrderStatusLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
+const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
+
 export default async function AdminDashboard() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  if (user.email !== SUPER_ADMIN_EMAIL) {
+    const { data: profile } = await authClient.from("users").select("role").eq("id", user.id).single();
+    if (profile?.role !== "admin") redirect("/dashboard/merchant");
+  }
 
-  if (profile?.role !== "admin") redirect("/dashboard/merchant");
-
+  const supabase = createAdminClient();
   const stats = await getAdminStats();
 
   const { data: recentOrders } = await supabase
     .from("orders")
-    .select("*, stores(name)")
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(5);
+
+  const storeIds = Array.from(
+    new Set((recentOrders ?? []).map((order) => order.store_id).filter(Boolean))
+  );
+
+  let stores: any[] = [];
+  if (storeIds.length > 0) {
+    const { data: storeData } = await supabase
+      .from("stores")
+      .select("id, name")
+      .in("id", storeIds);
+    stores = storeData ?? [];
+  }
+
+  const storesMap = new Map(stores.map((store) => [store.id, store]));
 
   const statusVariantMap: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
     pending: "warning",
@@ -81,7 +96,7 @@ export default async function AdminDashboard() {
               {(recentOrders ?? []).map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50/50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.customer_name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{(order.stores as { name: string } | null)?.name ?? "-"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{storesMap.get(order.store_id)?.name ?? "-"}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900">{formatCurrency(order.total_amount)}</td>
                   <td className="px-6 py-4">
                     <Badge variant={statusVariantMap[order.status] ?? "default"}>

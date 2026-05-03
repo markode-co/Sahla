@@ -36,9 +36,10 @@ export default async function DashboardLayout({
       <Sidebar
         role={profile.role}
         storeName={store?.name}
+        storeSlug={store?.slug}
         storeInitials={store?.logo_initials}
         storeColor={store?.logo_color}
-        userEmail={profile.email}
+        userEmail={user.email ?? profile.email}
         userInitials={userInitials}
       />
       <main className="flex-1 lg:p-8 p-4 pt-20 lg:pt-8 min-w-0">

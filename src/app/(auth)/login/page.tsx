@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/client";
 import { GoogleButton } from "@/components/ui/google-button";
 import { Suspense } from "react";
 
+const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,8 +51,18 @@ function LoginForm() {
         .eq("id", data.user.id)
         .single();
 
+      if (!profile) {
+        await supabase.from("users").insert({
+          id: data.user.id,
+          email: data.user.email ?? "",
+          full_name: data.user.user_metadata?.full_name ?? data.user.user_metadata?.name ?? null,
+          phone: data.user.user_metadata?.phone ?? null,
+          role: data.user.email === SUPER_ADMIN_EMAIL ? "admin" : "merchant",
+        });
+      }
+
       toast.success("مرحباً بعودتك!");
-      if (profile?.role === "admin") {
+      if (profile?.role === "admin" || data.user.email === SUPER_ADMIN_EMAIL) {
         router.push("/dashboard/admin");
       } else {
         const next = searchParams.get("next");

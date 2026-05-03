@@ -1,7 +1,14 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
+
 export async function middleware(request: NextRequest) {
+  // Next.js Server Actions send POST with this header — pass through without interfering
+  if (request.method === "POST" && request.headers.has("next-action")) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -56,11 +63,12 @@ export async function middleware(request: NextRequest) {
     .single();
 
   const role = profile?.role ?? "merchant";
+  const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
 
   // Already logged in → redirect away from auth pages
   if (pathname === "/login" || pathname === "/register") {
     return NextResponse.redirect(
-      new URL(role === "admin" ? "/dashboard/admin" : "/dashboard/merchant", request.url)
+      new URL(isSuperAdmin || role === "admin" ? "/dashboard/admin" : "/dashboard/merchant", request.url)
     );
   }
 
@@ -70,16 +78,16 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Role guards ──────────────────────────────────────────────────────────────
-  if (pathname.startsWith("/dashboard/admin") && role !== "admin") {
+  if (pathname.startsWith("/dashboard/admin") && role !== "admin" && !isSuperAdmin) {
     return NextResponse.redirect(new URL("/dashboard/merchant", request.url));
   }
 
-  if (pathname.startsWith("/dashboard/merchant") && role === "admin") {
+  if (pathname.startsWith("/dashboard/merchant") && role === "admin" && !isSuperAdmin) {
     return NextResponse.redirect(new URL("/dashboard/admin", request.url));
   }
 
   // ── Merchant dashboard: check store + subscription ───────────────────────────
-  if (pathname.startsWith("/dashboard/merchant") && role === "merchant") {
+  if (pathname.startsWith("/dashboard/merchant") && role === "merchant" && !isSuperAdmin) {
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id")
@@ -99,9 +107,17 @@ export async function middleware(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    // Only redirect if there is definitively no active subscription (not on query error)
-    if (!subError && (!subscription || subscription.status !== "active")) {
-      return NextResponse.redirect(new URL("/onboarding/subscription", request.url));
+    // Only redirect if there is definitively no subscription (not on query error)
+    if (!subError) {
+      if (!subscription) {
+        return NextResponse.redirect(new URL("/onboarding/subscription", request.url));
+      }
+      if (subscription.status === "pending") {
+        return NextResponse.redirect(new URL("/onboarding/subscription-pending", request.url));
+      }
+      if (subscription.status !== "active") {
+        return NextResponse.redirect(new URL("/onboarding/subscription", request.url));
+      }
     }
   }
 

@@ -95,7 +95,8 @@ export interface Subscription {
   id: string;
   user_id: string;
   plan: SubscriptionPlan;
-  status: "active" | "expired" | "cancelled";
+  status: "pending" | "active" | "expired" | "cancelled";
+  receipt_url: string | null;
   started_at: string;
   expires_at: string | null;
   created_at: string;
@@ -147,7 +148,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, { products: number; analytics
 };
 
 export const PLAN_PRICES: Record<SubscriptionPlan, number> = {
-  basic: 99,
-  pro: 199,
-  premium: 399,
+  basic: 8000,
+  pro: 10000,
+  premium: 12000,
 };

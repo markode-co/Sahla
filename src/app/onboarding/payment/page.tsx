@@ -91,6 +91,7 @@ export default function PaymentSetupPage() {
               value={form.instapayUsername}
               onChange={(e) => setForm({ ...form, instapayUsername: e.target.value })}
             />
+            <p className="text-xs text-gray-500">يمكن استخدام رقم انستاباي الرسمي: +201090886364</p>
           </div>
 
           {/* Bank Transfer */}
@@ -120,6 +121,7 @@ export default function PaymentSetupPage() {
               value={form.bankAccountName}
               onChange={(e) => setForm({ ...form, bankAccountName: e.target.value })}
             />
+            <p className="text-xs text-gray-500">التحويل البنكي سيتم تفعيله قريباً، يمكنك استخدام انستاباي الآن.</p>
           </div>
 
           {/* Cash on Delivery */}
