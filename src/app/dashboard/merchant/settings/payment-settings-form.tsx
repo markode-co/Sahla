@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
+import { stripMissingPostgrestColumns } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import type { PaymentMethod } from "@/types";
 
@@ -29,17 +30,55 @@ export function PaymentSettingsForm({
     setSaving(true);
     const supabase = createClient();
 
-    const { error } = await supabase.from("payment_methods").upsert({
+    const insertPayload = {
       store_id: storeId,
       instapay_username: form.instapayUsername || null,
       bank_name: form.bankName || null,
       bank_account_number: form.bankAccountNumber || null,
       bank_account_name: form.bankAccountName || null,
       cash_on_delivery: form.cashOnDelivery,
-    }, { onConflict: "store_id" });
+    };
+    const updatePayload = {
+      instapay_username: form.instapayUsername || null,
+      bank_name: form.bankName || null,
+      bank_account_number: form.bankAccountNumber || null,
+      bank_account_name: form.bankAccountName || null,
+      cash_on_delivery: form.cashOnDelivery,
+    };
+
+    const { data: existing, error: selectError } = await supabase
+      .from("payment_methods")
+      .select("id")
+      .eq("store_id", storeId)
+      .maybeSingle();
+
+    if (selectError) {
+      console.error("Payment method lookup error:", JSON.stringify(selectError, null, 2));
+      toast.error("حدث خطأ أثناء التحقق من طرق الدفع");
+      setSaving(false);
+      return;
+    }
+
+    let { error } = await (existing?.id
+      ? supabase.from("payment_methods").update(updatePayload).eq("id", existing.id)
+      : supabase.from("payment_methods").insert(insertPayload));
 
     if (error) {
-      toast.error("حدث خطأ أثناء الحفظ");
+      const sanitizedPayload = stripMissingPostgrestColumns(
+        existing?.id ? updatePayload : insertPayload,
+        error
+      );
+
+      if (sanitizedPayload !== (existing?.id ? updatePayload : insertPayload)) {
+        ({ error } = await (existing?.id
+          ? supabase.from("payment_methods").update(sanitizedPayload).eq("id", existing.id)
+          : supabase.from("payment_methods").insert(sanitizedPayload)));
+      }
+    }
+
+    if (error) {
+      console.error("Payment method save error:", JSON.stringify(error, null, 2));
+      toast.error(error.message || "حدث خطأ أثناء الحفظ");
     } else {
       toast.success("تم حفظ طرق الدفع");
       router.refresh();

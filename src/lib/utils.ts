@@ -45,6 +45,18 @@ export function formatDate(date: string): string {
   }).format(new Date(date));
 }
 
+export function stripMissingPostgrestColumns<T extends Record<string, unknown>>(payload: T, error: unknown): T {
+  const message = typeof error === "object" && error && "message" in error ? (error as any).message : undefined;
+  if (typeof message !== "string") return payload;
+
+  const match = message.match(/Could not find the '([^']+)' column/);
+  if (!match) return payload;
+
+  const missingColumn = match[1];
+  const { [missingColumn]: _, ...rest } = payload;
+  return rest as T;
+}
+
 export function getOrderStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     pending: "قيد المراجعة",
