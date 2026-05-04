@@ -68,7 +68,9 @@ export function CheckoutForm({ storeId, storeSlug, storeName, paymentMethod }: C
         const filePath = `receipts/${Date.now()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("receipts")
-          .upload(filePath, receiptFile);
+          .upload(filePath, receiptFile, {
+            contentType: receiptFile.type || undefined,
+          });
         if (!upErr) {
           const { data: { publicUrl } } = supabase.storage
             .from("receipts")

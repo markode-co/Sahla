@@ -99,7 +99,10 @@ export default function SubscriptionPage() {
     const path = `subscription-receipts/${user.id}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from("receipts")
-      .upload(path, receiptFile, { upsert: true });
+      .upload(path, receiptFile, {
+        contentType: receiptFile.type || undefined,
+        upsert: true,
+      });
 
     if (uploadError) {
       toast.error("فشل رفع الإيصال، يرجى المحاولة مجدداً");

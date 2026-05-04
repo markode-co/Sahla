@@ -57,7 +57,10 @@ export default function DocumentsPage() {
 
       const { error: uploadError } = await supabase.storage
         .from("documents")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, {
+          contentType: file.type || undefined,
+          upsert: true,
+        });
 
       if (uploadError) {
         toast.error(`فشل رفع ${doc.label}`);
