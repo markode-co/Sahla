@@ -26,6 +26,22 @@ export default function PaymentSetupPage() {
       return;
     }
 
+    if (form.instapayUsername && form.instapayUsername.trim() === "") {
+      toast.error("يرجى إدخال اسم مستخدم صحيح للإنستاباي");
+      return;
+    }
+
+    if (form.bankName) {
+      if (!form.bankAccountNumber || !form.bankAccountName) {
+        toast.error("يرجى إدخال جميع بيانات التحويل البنكي");
+        return;
+      }
+      if (form.bankAccountNumber.trim() === "" || form.bankAccountName.trim() === "") {
+        toast.error("يرجى إدخال بيانات صحيحة للتحويل البنكي");
+        return;
+      }
+    }
+
     setLoading(true);
     const supabase = createClient();
 
@@ -46,19 +62,25 @@ export default function PaymentSetupPage() {
       return;
     }
 
+    const method = form.instapayUsername.trim() ? 'instapay' : 
+                   form.bankName.trim() ? 'bank_transfer' : 
+                   'cash_on_delivery';
+
     const insertPayload = {
       store_id: store.id,
-      instapay_username: form.instapayUsername || null,
-      bank_name: form.bankName || null,
-      bank_account_number: form.bankAccountNumber || null,
-      bank_account_name: form.bankAccountName || null,
+      method,
+      instapay_username: form.instapayUsername.trim() || null,
+      bank_name: form.bankName.trim() || null,
+      bank_account_number: form.bankAccountNumber.trim() || null,
+      bank_account_name: form.bankAccountName.trim() || null,
       cash_on_delivery: form.cashOnDelivery,
     };
     const updatePayload = {
-      instapay_username: form.instapayUsername || null,
-      bank_name: form.bankName || null,
-      bank_account_number: form.bankAccountNumber || null,
-      bank_account_name: form.bankAccountName || null,
+      method,
+      instapay_username: form.instapayUsername.trim() || null,
+      bank_name: form.bankName.trim() || null,
+      bank_account_number: form.bankAccountNumber.trim() || null,
+      bank_account_name: form.bankAccountName.trim() || null,
       cash_on_delivery: form.cashOnDelivery,
     };
 
@@ -186,7 +208,7 @@ export default function PaymentSetupPage() {
                 >
                   <div
                     className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform absolute top-0.5 ${
-                      form.cashOnDelivery ? "translate-x-0.5" : "translate-x-6"
+                      form.cashOnDelivery ? "translate-x-6" : "translate-x-0.5"
                     }`}
                   />
                 </div>

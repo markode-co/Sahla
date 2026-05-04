@@ -3,6 +3,7 @@
 -- ============================================================
 
 ALTER TABLE public.payment_methods
+  ADD COLUMN IF NOT EXISTS method text NOT NULL CHECK (method IN ('instapay', 'bank_transfer', 'cash_on_delivery')) DEFAULT 'cash_on_delivery',
   ADD COLUMN IF NOT EXISTS instapay_username text,
   ADD COLUMN IF NOT EXISTS bank_name text,
   ADD COLUMN IF NOT EXISTS bank_account_number text,

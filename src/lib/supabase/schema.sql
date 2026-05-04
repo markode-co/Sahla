@@ -279,6 +279,7 @@ CREATE POLICY "Admins can manage all documents" ON public.documents
 CREATE TABLE IF NOT EXISTS public.payment_methods (
   id                  uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
   store_id            uuid REFERENCES public.stores(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  method              text NOT NULL CHECK (method IN ('instapay', 'bank_transfer', 'cash_on_delivery')),
   instapay_username   text,
   bank_name           text,
   bank_account_number text,
