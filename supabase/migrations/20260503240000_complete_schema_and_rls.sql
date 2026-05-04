@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
   plan text NOT NULL CHECK (plan IN ('basic', 'pro', 'premium')),
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'cancelled')),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'expired', 'cancelled')),
   started_at timestamptz DEFAULT now(),
   expires_at timestamptz,
   receipt_url text,

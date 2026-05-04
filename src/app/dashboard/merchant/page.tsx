@@ -27,7 +27,10 @@ export default async function MerchantDashboard() {
   const orders = ordersRes.data ?? [];
   const totalRevenue = orders
     .filter((o) => o.status === "approved" || o.status === "delivered")
-    .reduce((sum, o) => sum + (o.total_amount ?? 0), 0);
+    .reduce(
+      (sum, o) => sum + Number(o.total_amount ?? 0),
+      0
+    );
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const recentOrders = orders.slice(0, 5);
 
