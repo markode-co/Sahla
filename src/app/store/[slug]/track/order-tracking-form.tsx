@@ -150,19 +150,32 @@ export function OrderTrackingForm({ storeSlug, initialOrderId }: OrderTrackingFo
             </div>
           </div>
 
-          <div className="mt-6 bg-gray-50 rounded-2xl p-4">
+          <div className="mt-6 overflow-x-auto bg-gray-50 rounded-2xl p-4">
             <h4 className="text-sm font-semibold text-gray-900 mb-3">تفاصيل المنتجات</h4>
-            <div className="space-y-3">
-              {order.order_items?.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                  <div>
-                    <p className="font-medium text-gray-900">{item.product_name}</p>
-                    <p className="text-xs text-gray-500">الكمية: {item.quantity}</p>
-                  </div>
-                  <p className="font-medium text-gray-900">{formatCurrency(item.product_price * item.quantity)}</p>
-                </div>
-              ))}
-            </div>
+            {order.order_items?.length ? (
+              <table className="w-full text-right text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-500">
+                    <th className="px-3 py-2">المنتج</th>
+                    <th className="px-3 py-2">السعر</th>
+                    <th className="px-3 py-2">الكمية</th>
+                    <th className="px-3 py-2">الإجمالي</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {order.order_items.map((item: any) => (
+                    <tr key={item.id} className="bg-white">
+                      <td className="px-3 py-3 text-gray-900">{item.product_name}</td>
+                      <td className="px-3 py-3 text-gray-700">{formatCurrency(item.product_price)}</td>
+                      <td className="px-3 py-3 text-gray-700">{item.quantity}</td>
+                      <td className="px-3 py-3 text-gray-900">{formatCurrency(item.product_price * item.quantity)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-sm text-gray-500">لا توجد منتجات مضافة لهذا الطلب.</p>
+            )}
           </div>
 
           {order.payments?.[0]?.receipt_url && (
