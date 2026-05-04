@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { ServiceWorkerRegister } from "@/components/ui/sw-register";
 import { PWASetup } from "@/components/ui/pwa-setup";
+import { DynamicManifest } from "@/components/ui/dynamic-manifest";
 
 export const metadata: Metadata = {
   title: "سهلة - منصة التجارة الإلكترونية",
@@ -31,6 +32,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <PWASetup />
+        <DynamicManifest />
         {children}
         <ServiceWorkerRegister />
         <Toaster

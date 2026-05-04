@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Bell, Home, LogOut, Settings, ShoppingBag, User } from "lucide-react";
+import { AuthModal } from "@/components/store/auth-modal";
+import { StoreHeader } from "@/components/store/store-header";
+import type { Store, PaymentMethod } from "@/types";
 
 interface Props {
   params: { slug: string };
@@ -14,32 +17,40 @@ export default async function StoreLayout({ params, children }: Props) {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("name")
+    .select("*")
     .eq("slug", slug)
     .eq("status", "approved")
     .single();
 
   if (!store) notFound();
 
+  const { data: paymentMethod } = await supabase
+    .from("payment_methods")
+    .select("*")
+    .eq("store_id", store.id)
+    .single();
+
   const navItems = [
-    { href: `/store/${slug}`, label: "الرئيسية", icon: Home },
-    { href: `/store/${slug}/orders`, label: "الطلبات", icon: ShoppingBag },
-    { href: `/store/${slug}/notifications`, label: "الإشعارات", icon: Bell },
-    { href: `/store/${slug}/profile`, label: "الملف الشخصي", icon: User },
-    { href: `/store/${slug}/settings`, label: "الإعدادات", icon: Settings },
+    { href: `/store/${slug}`, label: "الرئيسية", icon: Home, requiresAuth: false },
+    { href: `/store/${slug}/orders`, label: "الطلبات", icon: ShoppingBag, requiresAuth: true },
+    { href: `/store/${slug}/notifications`, label: "الإشعارات", icon: Bell, requiresAuth: true },
+    { href: `/store/${slug}/profile`, label: "الملف الشخصي", icon: User, requiresAuth: true },
+    { href: `/store/${slug}/settings`, label: "الإعدادات", icon: Settings, requiresAuth: true },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
+      <StoreHeader store={store} paymentMethod={paymentMethod} />
+
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between h-20">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:h-20 py-4">
             <div>
               <p className="text-xs text-gray-500">متجر إلكتروني كامل</p>
               <h1 className="text-lg font-semibold text-gray-900">{store.name}</h1>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -53,13 +64,15 @@ export default async function StoreLayout({ params, children }: Props) {
                   </Link>
                 );
               })}
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium hover:bg-red-100"
-              >
-                <LogOut className="w-4 h-4" />
-                تسجيل الخروج
-              </Link>
+              <form action="/api/auth/logout" method="post" className="inline">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium hover:bg-red-100 transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  تسجيل الخروج
+                </button>
+              </form>
             </div>
           </div>
         </div>

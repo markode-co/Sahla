@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
-import { StoreHeader } from "@/components/store/store-header";
 import { ProductGrid } from "@/components/store/product-grid";
 import { CartButton } from "@/components/store/cart-button";
 
@@ -59,8 +58,6 @@ export default async function StorePage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      <StoreHeader store={store} paymentMethod={paymentMethod} />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>

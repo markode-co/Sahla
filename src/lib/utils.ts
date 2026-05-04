@@ -66,8 +66,11 @@ export function stripMissingPostgrestColumns<T extends Record<string, unknown>>(
 
 export function getOrderStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    pending: "قيد المراجعة",
-    approved: "مقبول",
+    pending: "تحت المعالجة",
+    approved: "تم الاستلام",
+    received: "تم الاستلام",
+    preparing: "قيد التجهيز",
+    on_the_way: "في الطريق",
     rejected: "مرفوض",
     cancelled: "ملغي",
     delivered: "تم التسليم",
@@ -78,10 +81,13 @@ export function getOrderStatusLabel(status: string): string {
 export function getOrderStatusColor(status: string): string {
   const colors: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800",
-    approved: "bg-green-100 text-green-800",
+    approved: "bg-emerald-100 text-emerald-800",
+    received: "bg-emerald-100 text-emerald-800",
+    preparing: "bg-sky-100 text-sky-800",
+    on_the_way: "bg-blue-100 text-blue-800",
     rejected: "bg-red-100 text-red-800",
     cancelled: "bg-gray-100 text-gray-800",
-    delivered: "bg-blue-100 text-blue-800",
+    delivered: "bg-green-100 text-green-800",
   };
   return colors[status] ?? "bg-gray-100 text-gray-800";
 }

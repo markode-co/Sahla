@@ -16,17 +16,23 @@ const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
 const statusVariantMap: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
   pending: "warning",
   approved: "success",
+  received: "success",
+  preparing: "info",
+  on_the_way: "info",
   rejected: "danger",
   cancelled: "default",
-  delivered: "info",
+  delivered: "success",
 };
 
 const statusOrder: Record<string, number> = {
   pending: 0,
   approved: 1,
-  delivered: 2,
-  rejected: 3,
-  cancelled: 4,
+  received: 1,
+  preparing: 2,
+  on_the_way: 3,
+  delivered: 4,
+  rejected: 5,
+  cancelled: 6,
 };
 
 type Order = {
@@ -331,8 +337,8 @@ export default function AdminOrdersPage() {
                     <ReceiptLink receiptUrl={payment.receipt_url} />
                   )}
 
-                  {/* Order actions — pending or approved */}
-                  {(order.status === "pending" || order.status === "approved") && (
+                  {/* Order actions — update next delivery stage */}
+                  {!(order.status === "delivered" || order.status === "rejected" || order.status === "cancelled") && (
                     <div className="pt-3 border-t border-gray-100">
                       <OrderStatusUpdater orderId={order.id} status={order.status as OrderStatus} />
                     </div>

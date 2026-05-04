@@ -17,6 +17,14 @@ export default function OrderTrackingForm({ storeSlug }: OrderTrackingFormProps)
   const [order, setOrder] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const orderSteps = [
+    { id: "pending", label: "تحت المعالجة" },
+    { id: "received", label: "تم الاستلام" },
+    { id: "preparing", label: "قيد التجهيز" },
+    { id: "on_the_way", label: "في الطريق" },
+    { id: "delivered", label: "تم التسليم" },
+  ];
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!orderId.trim() || !phone.trim()) {
@@ -111,6 +119,29 @@ export default function OrderTrackingForm({ storeSlug }: OrderTrackingFormProps)
             <div className="text-right">
               <p className="text-sm text-gray-500">تاريخ الطلب</p>
               <p className="font-medium text-gray-900">{formatDate(order.created_at)}</p>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="grid gap-3 sm:grid-cols-5">
+              {orderSteps.map((step, index) => {
+                const currentIndex = orderSteps.findIndex((item) => item.id === order.status);
+                const isComplete = index <= currentIndex;
+                const isActive = step.id === order.status;
+                return (
+                  <div key={step.id} className="flex flex-col items-center text-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${isComplete ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      {index + 1}
+                    </div>
+                    <p className={`mt-2 text-xs ${isActive ? 'text-primary-700' : 'text-gray-500'}`}>
+                      {step.label}
+                    </p>
+                    {index < orderSteps.length - 1 && (
+                      <div className={`w-px h-8 mx-auto mt-2 ${isComplete ? 'bg-primary-600' : 'bg-gray-200'}`} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

@@ -16,12 +16,26 @@
 
 html {
   scroll-behavior: smooth;
+  min-height: 100%;
 }
 
 body {
+  min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
   font-family: 'Cairo', sans-serif;
   background-color: #f8fafc;
   color: #0f172a;
+}
+
+img,
+svg,
+video,
+canvas,
+figure {
+  max-width: 100%;
+  height: auto;
 }
 
 /* RTL support */

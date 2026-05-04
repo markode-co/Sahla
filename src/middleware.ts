@@ -34,7 +34,32 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  const hostname = request.nextUrl.hostname;
   const pathname = request.nextUrl.pathname;
+
+  const appHostnames = new Set<string>(["localhost", "127.0.0.1"]);
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    try {
+      appHostnames.add(new URL(process.env.NEXT_PUBLIC_SITE_URL).hostname);
+    } catch (error) {}
+  }
+  if (process.env.NEXT_PUBLIC_APP_HOSTNAME) {
+    appHostnames.add(process.env.NEXT_PUBLIC_APP_HOSTNAME);
+  }
+
+  if (!appHostnames.has(hostname)) {
+    const { data: store } = await supabase
+      .from("stores")
+      .select("slug")
+      .eq("custom_domain", hostname)
+      .single();
+
+    if (store?.slug) {
+      const rewrittenPath = pathname === "/" ? `/store/${store.slug}` : `/store/${store.slug}${pathname}`;
+      const rewriteUrl = new URL(rewrittenPath + request.nextUrl.search, request.url);
+      return NextResponse.rewrite(rewriteUrl);
+    }
+  }
 
   // ── Public routes ────────────────────────────────────────────────────────────
   const isPublicRoute =

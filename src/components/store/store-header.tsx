@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MapPin, Phone, Smartphone, Building2, Truck, Download } from "lucide-react";
 import type { Store, PaymentMethod } from "@/types";
 import { createClient } from "@/lib/supabase/client";
-import { triggerAppInstall, setupPWAPromptListener } from "@/lib/pwa-utils";
+import { triggerAppInstall, setupPWAPromptListener, isAppInstalled } from "@/lib/pwa-utils";
 
 interface StoreHeaderProps {
   store: Store;
@@ -14,6 +14,7 @@ interface StoreHeaderProps {
 
 export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
   const [session, setSession] = useState<any>(null);
+  const [isAppInstalledState, setIsAppInstalledState] = useState(false);
 
   useEffect(() => {
     setupPWAPromptListener();
@@ -22,13 +23,27 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
     });
+
+    // Check if app is installed
+    setIsAppInstalledState(isAppInstalled());
+
+    // Listen for app installation changes
+    const handleAppInstalled = () => {
+      setIsAppInstalledState(true);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
   }, []);
 
   return (
     <div className="bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:gap-5 min-w-0">
             {store.logo_url ? (
               <img
                 src={store.logo_url}
@@ -80,7 +95,7 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             {!session && (
               <div className="hidden sm:flex items-center gap-2">
                 <Link
@@ -97,13 +112,19 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
                 </Link>
               </div>
             )}
-            <button
-              onClick={() => triggerAppInstall(store.name, "customer")}
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition active:scale-95"
-            >
-              <Download className="w-4 h-4" />
-              تنزيل التطبيق
-            </button>
+            {!isAppInstalledState && (
+              <button
+                onClick={() => {
+                  triggerAppInstall(store.name, "customer");
+                  // Immediately hide the button after click
+                  setIsAppInstalledState(true);
+                }}
+                className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition active:scale-95"
+              >
+                <Download className="w-4 h-4" />
+                تنزيل التطبيق
+              </button>
+            )}
           </div>
         </div>
       </div>

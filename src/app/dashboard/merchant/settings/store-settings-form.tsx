@@ -18,8 +18,12 @@ export function StoreSettingsForm({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [slugError, setSlugError] = useState<string>("");
+  const [domainError, setDomainError] = useState<string>("");
   const [form, setForm] = useState({
     name: store.name,
+    slug: store.slug,
+    customDomain: store.custom_domain ?? "",
     description: store.description ?? "",
     fullName: profile?.full_name ?? "",
     phone: profile?.phone ?? "",
@@ -35,8 +39,125 @@ export function StoreSettingsForm({
     };
   }, [logoPreview, logoFile]);
 
+  const validateSlug = async (slug: string): Promise<boolean> => {
+    if (!slug.trim()) {
+      setSlugError("الرابط مطلوب");
+      return false;
+    }
+
+    // Check if slug contains only valid characters (letters, numbers, hyphens)
+    const slugRegex = /^[a-zA-Z0-9-]+$/;
+    if (!slugRegex.test(slug)) {
+      setSlugError("الرابط يجب أن يحتوي على أحرف إنجليزية وأرقام وشرطة فقط");
+      return false;
+    }
+
+    // Check if slug is unique (excluding current store)
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("slug", slug)
+      .neq("id", store.id);
+
+    if (error) {
+      setSlugError("حدث خطأ في التحقق من الرابط");
+      return false;
+    }
+
+    if (data && data.length > 0) {
+      setSlugError("هذا الرابط مستخدم بالفعل");
+      return false;
+    }
+
+    setSlugError("");
+    return true;
+  };
+
+  const normalizeDomain = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*/, "");
+
+  const validateDomain = async (domain: string): Promise<boolean> => {
+    const normalizedDomain = normalizeDomain(domain);
+    setForm((prev) => ({ ...prev, customDomain: normalizedDomain }));
+
+    if (!normalizedDomain) {
+      setDomainError("");
+      return true;
+    }
+
+    const domainRegex = /^(?!-)(?!.*--)(?!.*\.$)(?!.*\.\.)[a-z0-9]+(?:[.-][a-z0-9]+)*\.[a-z]{2,63}$/;
+    if (!domainRegex.test(normalizedDomain)) {
+      setDomainError("أدخل دومين صالح بدون https:// أو مسارات");
+      return false;
+    }
+
+    if (normalizedDomain === store.custom_domain) {
+      setDomainError("");
+      return true;
+    }
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("custom_domain", normalizedDomain)
+      .neq("id", store.id);
+
+    if (error) {
+      setDomainError("حدث خطأ في التحقق من الدومين");
+      return false;
+    }
+
+    if (data && data.length > 0) {
+      setDomainError("هذا الدومين مستخدم بالفعل");
+      return false;
+    }
+
+    try {
+      const response = await fetch(`/api/validate-domain?domain=${encodeURIComponent(normalizedDomain)}`);
+      const result = await response.json();
+      if (!response.ok || !result.valid) {
+        setDomainError(result.error || "هذا الدومين غير متاح حالياً");
+        return false;
+      }
+    } catch (err) {
+      setDomainError("لم نتمكن من التحقق من الدومين الآن، حاول لاحقاً");
+      return false;
+    }
+
+    setDomainError("");
+    return true;
+  };
+
+  const handleSlugChange = async (value: string) => {
+    setForm(prev => ({ ...prev, slug: value }));
+    if (value !== store.slug) {
+      await validateSlug(value);
+    } else {
+      setSlugError("");
+    }
+  };
+
+  const handleDomainChange = (value: string) => {
+    setForm(prev => ({ ...prev, customDomain: value }));
+    setDomainError("");
+  };
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+
+    // Validate slug and custom domain before saving
+    const isSlugValid = await validateSlug(form.slug);
+    const isDomainValid = await validateDomain(form.customDomain);
+    if (!isSlugValid || !isDomainValid) {
+      return;
+    }
+
     setSaving(true);
     const supabase = createClient();
 
@@ -64,6 +185,8 @@ export function StoreSettingsForm({
     const [storeUpdate, profileUpdate] = await Promise.all([
       supabase.from("stores").update({
         name: form.name,
+        slug: form.slug,
+        custom_domain: form.customDomain || null,
         description: form.description || null,
         logo_initials: generateLogoInitials(form.name),
         logo_url: logoUrl,
@@ -129,12 +252,42 @@ export function StoreSettingsForm({
           </div>
           <div>
             <label className="label">رابط المتجر</label>
-            <input
-              className="input-field bg-gray-50 text-gray-400 cursor-not-allowed"
-              value={store.slug}
-              readOnly
-            />
+            <div className="flex items-center">
+              <span className="inline-flex items-center px-3 py-2 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-sm text-gray-600">
+                https://sahla.app/store/
+              </span>
+              <input
+                className={`input-field rounded-l-none border-l-0 ${slugError ? 'border-red-300 focus:border-red-500' : ''}`}
+                value={form.slug}
+                onChange={(e) => handleSlugChange(e.target.value)}
+                placeholder="اسم-المتجر"
+                required
+              />
+            </div>
+            {slugError && (
+              <p className="text-xs text-red-600 mt-1">{slugError}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-2">
+              رابط متجرك سيكون: https://sahla.app/store/{form.slug}
+            </p>
           </div>
+        </div>
+
+        <div>
+          <label className="label">دومين المتجر (اختياري)</label>
+          <input
+            className={`input-field ${domainError ? 'border-red-300 focus:border-red-500' : ''}`}
+            value={form.customDomain}
+            onChange={(e) => handleDomainChange(e.target.value)}
+            onBlur={async () => { await validateDomain(form.customDomain); }}
+            placeholder="example.com"
+          />
+          {domainError && (
+            <p className="text-xs text-red-600 mt-1">{domainError}</p>
+          )}
+          <p className="text-xs text-gray-400 mt-2">
+            إذا أدخلت دومين صالحاً وتم توجيهه إلى التطبيق عبر DNS، سيكون هذا الدومين هو الرابط المباشر لمتجرك.
+          </p>
         </div>
 
         <div>

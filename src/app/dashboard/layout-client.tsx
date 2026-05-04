@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { generateLogoInitials } from "@/lib/utils";
 import { Download } from "lucide-react";
-import { triggerAppInstall, setupPWAPromptListener } from "@/lib/pwa-utils";
+import { triggerAppInstall, setupPWAPromptListener, isAppInstalled } from "@/lib/pwa-utils";
 
 interface DashboardLayoutClientProps {
   profile: any;
@@ -15,36 +15,56 @@ interface DashboardLayoutClientProps {
 
 export function DashboardLayoutClient({ profile, store, user, children }: DashboardLayoutClientProps) {
   const userInitials = generateLogoInitials(profile.full_name ?? profile.email);
+  const [isAppInstalledState, setIsAppInstalledState] = useState(false);
 
   useEffect(() => {
     setupPWAPromptListener();
+
+    // Check if app is installed
+    setIsAppInstalledState(isAppInstalled());
+
+    // Listen for app installation changes
+    const handleAppInstalled = () => {
+      setIsAppInstalledState(true);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
   }, []);
 
   const handleDownloadApp = () => {
     const role = profile?.role === "merchant" || profile?.role === "admin" ? "merchant" : "customer";
     triggerAppInstall("سهلة - لوحة التحكم", role);
+    // Immediately hide the button after click
+    setIsAppInstalledState(true);
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="rtl">
+    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden" dir="rtl">
       <Sidebar
         role={profile.role}
         storeName={store?.name}
         storeSlug={store?.slug}
+        storeCustomDomain={store?.custom_domain}
         storeInitials={store?.logo_initials}
         storeColor={store?.logo_color}
         userEmail={user.email ?? profile.email}
         userInitials={userInitials}
       />
-      <main className="flex-1 lg:p-8 p-4 pt-20 lg:pt-8 min-w-0">
-        <div className="mb-6 flex justify-end">
-          <button
-            onClick={handleDownloadApp}
-            className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition"
-          >
-            <Download className="w-4 h-4" />
-            تنزيل التطبيق
-          </button>
+      <main className="flex-1 lg:p-8 p-4 pt-20 lg:pt-16 min-w-0">
+        <div className="mb-6 flex flex-wrap justify-end gap-3">
+          {!isAppInstalledState && (
+            <button
+              onClick={handleDownloadApp}
+              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition"
+            >
+              <Download className="w-4 h-4" />
+              تنزيل التطبيق
+            </button>
+          )}
         </div>
         {children}
       </main>

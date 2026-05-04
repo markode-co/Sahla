@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.stores (
   user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
   name text NOT NULL,
   slug text UNIQUE NOT NULL,
+  custom_domain text UNIQUE,
   description text,
   logo_url text,
   logo_color text DEFAULT '#0ea5e9',

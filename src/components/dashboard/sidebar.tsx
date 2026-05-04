@@ -28,6 +28,7 @@ interface SidebarProps {
   role: "admin" | "merchant";
   storeName?: string;
   storeSlug?: string;
+  storeCustomDomain?: string | null;
   storeInitials?: string;
   storeColor?: string;
   userEmail?: string;
@@ -53,6 +54,7 @@ export function Sidebar({
   role,
   storeName,
   storeSlug,
+  storeCustomDomain,
   storeInitials,
   storeColor,
   userEmail,
@@ -161,7 +163,7 @@ export function Sidebar({
           {!isOnAdminPages && role === "merchant" && storeSlug && (
             <div className="space-y-1">
               <Link
-                href={`/store/${storeSlug}/login?next=/store/${storeSlug}`}
+                href={storeCustomDomain ? `https://${storeCustomDomain}/login?next=/` : `/store/${storeSlug}/login?next=/store/${storeSlug}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={closeMenu}
@@ -171,7 +173,13 @@ export function Sidebar({
                 المتجر العام
                 <ChevronLeft className="w-4 h-4 mr-auto" />
               </Link>
-              <p className="text-xs text-gray-400 px-3">https://sahla.app/store/{storeSlug}</p>
+              <p className="text-xs text-gray-400 px-3">
+                {storeCustomDomain ? (
+                  <span className="font-medium">https://{storeCustomDomain}</span>
+                ) : (
+                  <><span className="text-gray-500">https://sahla.app/store/</span><span className="font-medium">{storeSlug}</span></>
+                )}
+              </p>
             </div>
           )}
 

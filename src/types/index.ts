@@ -17,6 +17,7 @@ export interface Store {
   user_id: string;
   name: string;
   slug: string;
+  custom_domain: string | null;
   description: string | null;
   logo_url: string | null;
   logo_color: string;
@@ -43,6 +44,9 @@ export interface Product {
 export type OrderStatus =
   | "pending"
   | "approved"
+  | "received"
+  | "preparing"
+  | "on_the_way"
   | "rejected"
   | "cancelled"
   | "delivered";

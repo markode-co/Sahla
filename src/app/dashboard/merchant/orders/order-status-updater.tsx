@@ -16,30 +16,53 @@ export function OrderStatusUpdater({ orderId, status }: OrderStatusUpdaterProps)
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const actions = status === "pending"
-    ? [
-        { id: "approved", label: "قبول", icon: CheckCircle, color: "bg-green-600 hover:bg-green-700" },
-        { id: "rejected", label: "رفض", icon: XCircle, color: "bg-red-600 hover:bg-red-700" },
-      ]
-    : status === "approved"
-    ? [
-        { id: "delivered", label: "تسليم", icon: Truck, color: "bg-blue-600 hover:bg-blue-700" },
-        { id: "cancelled", label: "إلغاء", icon: Slash, color: "bg-gray-600 hover:bg-gray-700" },
-      ]
-    : [];
+  const getNextActions = (status: OrderStatus) => {
+    switch (status) {
+      case "pending":
+        return [
+          { id: "received", label: "تم الاستلام", icon: CheckCircle, color: "bg-emerald-600 hover:bg-emerald-700" },
+          { id: "rejected", label: "رفض", icon: XCircle, color: "bg-red-600 hover:bg-red-700" },
+        ];
+      case "approved":
+      case "received":
+        return [
+          { id: "preparing", label: "قيد التجهيز", icon: Truck, color: "bg-sky-600 hover:bg-sky-700" },
+          { id: "cancelled", label: "إلغاء", icon: Slash, color: "bg-gray-600 hover:bg-gray-700" },
+        ];
+      case "preparing":
+        return [
+          { id: "on_the_way", label: "في الطريق", icon: Truck, color: "bg-blue-600 hover:bg-blue-700" },
+          { id: "cancelled", label: "إلغاء", icon: Slash, color: "bg-gray-600 hover:bg-gray-700" },
+        ];
+      case "on_the_way":
+        return [
+          { id: "delivered", label: "تم التسليم", icon: CheckCircle, color: "bg-green-600 hover:bg-green-700" },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const actions = getNextActions(status);
 
   async function handle(statusToUpdate: OrderStatus) {
     setLoading(statusToUpdate);
     try {
       await updateOrderStatus(orderId, statusToUpdate);
       toast.success(
-        statusToUpdate === "approved"
-          ? "تم قبول الطلب"
-          : statusToUpdate === "rejected"
-          ? "تم رفض الطلب"
+        statusToUpdate === "received"
+          ? "تم تسجيل استلام الطلب"
+          : statusToUpdate === "preparing"
+          ? "الطلب قيد التجهيز"
+          : statusToUpdate === "on_the_way"
+          ? "الطلب في الطريق"
           : statusToUpdate === "delivered"
           ? "تم تسليم الطلب"
-          : "تم إلغاء الطلب"
+          : statusToUpdate === "rejected"
+          ? "تم رفض الطلب"
+          : statusToUpdate === "cancelled"
+          ? "تم إلغاء الطلب"
+          : "تم تحديث حالة الطلب"
       );
       router.refresh();
     } catch {

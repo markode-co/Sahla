@@ -21,14 +21,28 @@ export async function triggerAppInstall(appTitle: string, role: "customer" | "me
   const isAndroidDevice = isAndroid();
   const isIOSDevice = isIOS();
 
-  // For Android devices
-  if (isAndroidDevice) {
+  // For Android and Desktop - use the install prompt
+  if (isAndroidDevice || (!isAndroidDevice && !isIOSDevice)) {
     try {
-      // Try to use the Web App Install Prompt (if available)
+      // Check if the install prompt is available
       const deferredPrompt = (window as any).deferredPrompt;
       if (deferredPrompt) {
+        // Show the install prompt
         deferredPrompt.prompt();
+
+        // Wait for the user to respond to the prompt
         const choiceResult = await deferredPrompt.userChoice;
+
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+          localStorage.setItem("appInstalled", "true");
+          // Dispatch custom event to notify components
+          window.dispatchEvent(new CustomEvent('appinstalled'));
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+
+        // Clear the deferred prompt
         (window as any).deferredPrompt = null;
         return;
       }
@@ -36,47 +50,47 @@ export async function triggerAppInstall(appTitle: string, role: "customer" | "me
       console.warn("Install prompt error:", error);
     }
 
-    // Fallback to Chrome intent on Android
-    const manifestPath = role === "customer" ? "/manifest-customer.json" : "/manifest-merchant.json";
-    const url = new URL(window.location.href);
-    const title = appTitle || "سهلة";
-
-    try {
-      window.location.href = `intent://addshortcut?url=${encodeURIComponent(url.toString())}&title=${encodeURIComponent(title)}&manifest=${encodeURIComponent(manifestPath)}#Intent;scheme=https;package=com.android.chrome;end;`;
-    } catch {
-      showInstallInstructions("android");
-    }
+    // Fallback: Show instructions for manual installation
+    showInstallInstructions(isAndroidDevice ? "android" : "desktop", role);
   }
-  // For iOS devices
+  // For iOS devices - show instructions for "Add to Home Screen"
   else if (isIOSDevice) {
-    showInstallInstructions("ios");
-  }
-  // For desktop
-  else {
-    showInstallInstructions("desktop");
+    showInstallInstructions("ios", role);
   }
 }
 
-function showInstallInstructions(platform: "android" | "ios" | "desktop") {
+function showInstallInstructions(platform: "android" | "ios" | "desktop", role: "customer" | "merchant" = "customer") {
+  const appName = role === "merchant" ? "سهلة - لوحة التحكم" : "سهلة - متجر إلكتروني";
+
   if (platform === "android") {
     alert(
-      "لتنزيل التطبيق على Android:\n\n" +
-      "1. اضغط على القائمة (ثلاث نقاط) في المتصفح\n" +
+      `لإضافة ${appName} إلى شاشتك الرئيسية على Android:\n\n` +
+      "1. اضغط على النقاط الثلاث (...) في أعلى المتصفح\n" +
       "2. اختر 'إضافة إلى الشاشة الرئيسية'\n" +
-      "3. اختر الاسم وانقر 'إضافة'"
+      "3. اختر الاسم واضغط 'إضافة'\n\n" +
+      "سيتم إضافة أيقونة التطبيق إلى شاشتك الرئيسية!"
     );
   } else if (platform === "ios") {
-    alert(
-      "لتنزيل التطبيق على iOS:\n\n" +
-      "1. اضغط على زر المشاركة (مربع بسهم)\n" +
-      "2. مرر لليسار واختر 'إضافة إلى الشاشة الرئيسية'\n" +
-      "3. اختر الاسم وانقر 'إضافة'"
-    );
+    const instructions = role === "merchant"
+      ? "لإضافة لوحة تحكم سهلة إلى شاشتك الرئيسية على iOS:\n\n" +
+        "1. اضغط على أيقونة المشاركة (مربع بسهم) في أسفل المتصفح\n" +
+        "2. مرر للأسفل واختر 'إضافة إلى الشاشة الرئيسية'\n" +
+        "3. اختر الاسم 'سهلة' واضغط 'إضافة'\n\n" +
+        "سيتم إضافة أيقونة لوحة التحكم إلى شاشتك الرئيسية!"
+      : "لإضافة متجر سهلة إلى شاشتك الرئيسية على iOS:\n\n" +
+        "1. اضغط على أيقونة المشاركة (مربع بسهم) في أسفل المتصفح\n" +
+        "2. مرر للأسفل واختر 'إضافة إلى الشاشة الرئيسية'\n" +
+        "3. اختر الاسم 'سهلة' واضغط 'إضافة'\n\n" +
+        "سيتم إضافة أيقونة المتجر إلى شاشتك الرئيسية!";
+
+    alert(instructions);
   } else {
     alert(
-      "لتنزيل التطبيق:\n\n" +
-      "استخدم جهاز Android أو iOS لتنزيل التطبيق بسهولة،\n" +
-      "أو جرّب خاصية 'إضافة إلى الشاشة الرئيسية' في متصفحك."
+      `لإضافة ${appName} إلى سطح المكتب:\n\n` +
+      "في متصفح Chrome أو Edge:\n" +
+      "1. اضغط على النقاط الثلاث (...) في أعلى المتصفح\n" +
+      "2. اختر 'تثبيت سهلة' أو 'Install'\n\n" +
+      "أو يمكنك استخدام 'إضافة إلى الشاشة الرئيسية' في المتصفحات الأخرى."
     );
   }
 }
@@ -94,5 +108,27 @@ export function setupPWAPromptListener() {
 
   (window as any).addEventListener("appinstalled", () => {
     console.log("PWA app installed successfully");
+    // Store installation status
+    localStorage.setItem("appInstalled", "true");
   });
+}
+
+/**
+ * Check if the app is installed as PWA
+ */
+export function isAppInstalled(): boolean {
+  if (typeof window === "undefined") return false;
+
+  // Check if running in standalone mode (iOS)
+  if ((window.navigator as any).standalone === true) {
+    return true;
+  }
+
+  // Check if running in standalone mode (Android)
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+
+  // Check localStorage flag
+  return localStorage.getItem("appInstalled") === "true";
 }

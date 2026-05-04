@@ -19,7 +19,7 @@ function StoreRegisterForm({ storeSlug }: { storeSlug: string }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [form, setForm] = useState({ email: "", password: "", fullName: "" });
+  const [form, setForm] = useState({ email: "", password: "", fullName: "", phone: "" });
 
   const next = searchParams.get("next");
   const safeNext = next && next.startsWith("/") ? next : `/store/${storeSlug}`;
@@ -44,6 +44,7 @@ function StoreRegisterForm({ storeSlug }: { storeSlug: string }) {
       options: {
         data: {
           full_name: form.fullName,
+          phone: form.phone,
           role: "customer",
         },
       },
@@ -89,6 +90,17 @@ function StoreRegisterForm({ storeSlug }: { storeSlug: string }) {
                 placeholder="محمد أحمد"
                 value={form.fullName}
                 onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label">رقم الهاتف</label>
+              <input
+                type="tel"
+                required
+                className="input-field"
+                placeholder="01XXXXXXXXX"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </div>
             <div>

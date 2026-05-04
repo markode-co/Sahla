@@ -32,15 +32,20 @@ export default async function MerchantOrdersPage() {
         case "pending":
           return 0;
         case "approved":
+        case "received":
           return 1;
-        case "delivered":
+        case "preparing":
           return 2;
-        case "rejected":
+        case "on_the_way":
           return 3;
-        case "cancelled":
+        case "delivered":
           return 4;
-        default:
+        case "rejected":
           return 5;
+        case "cancelled":
+          return 6;
+        default:
+          return 7;
       }
     };
     const rank = orderRank(a.status) - orderRank(b.status);
@@ -50,9 +55,12 @@ export default async function MerchantOrdersPage() {
   const statusVariantMap: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
     pending: "warning",
     approved: "success",
+    received: "success",
+    preparing: "info",
+    on_the_way: "info",
     rejected: "danger",
     cancelled: "default",
-    delivered: "info",
+    delivered: "success",
   };
 
   return (
@@ -116,7 +124,7 @@ export default async function MerchantOrdersPage() {
               </div>
 
               {/* Status updater */}
-              {(order.status === "pending" || order.status === "approved") && (
+              {!(order.status === "delivered" || order.status === "rejected" || order.status === "cancelled") && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <OrderStatusUpdater orderId={order.id} status={order.status as OrderStatus} />
                 </div>
