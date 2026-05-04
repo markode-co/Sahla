@@ -1,0 +1,177 @@
+"use client";
+
+import { useState } from "react";
+import { CheckCircle, Search } from "lucide-react";
+import toast from "react-hot-toast";
+import { formatCurrency, formatDate, getOrderStatusLabel, getPaymentMethodLabel } from "@/lib/utils";
+import { ReceiptLink } from "@/components/receipt-link";
+
+interface OrderTrackingFormProps {
+  storeSlug: string;
+  initialOrderId?: string;
+}
+
+export function OrderTrackingForm({ storeSlug, initialOrderId }: OrderTrackingFormProps) {
+  const [orderId, setOrderId] = useState(initialOrderId ?? "");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [order, setOrder] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!orderId.trim() || !phone.trim()) {
+      setError("يرجى إدخال رقم الطلب ورقم الهاتف");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setOrder(null);
+
+    try {
+      const response = await fetch("/api/track-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ storeSlug, orderId, customerPhone: phone }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "فشل البحث عن الطلب");
+      }
+
+      setOrder(data.order);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "حدث خطأ أثناء البحث";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="card p-6">
+        <h2 className="section-title">بحث الطلب</h2>
+        <p className="text-gray-500 mt-1">أدخل بيانات الطلب لعرض تفاصيل الحالة.</p>
+
+        <form onSubmit={handleSearch} className="grid gap-4 sm:grid-cols-[1fr_220px] mt-6">
+          <div className="space-y-4">
+            <div>
+              <label className="label">رقم الطلب</label>
+              <input
+                className="input-field"
+                value={orderId}
+                onChange={(e) => setOrderId(e.target.value)}
+                placeholder="مثال: abc123..."
+              />
+            </div>
+            <div>
+              <label className="label">رقم الهاتف</label>
+              <input
+                className="input-field"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="010XXXXXXXX"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary h-12 w-full"
+          >
+            {loading ? "جاري البحث..." : 
+              <span className="inline-flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" /> بحث
+              </span>
+            }
+          </button>
+        </form>
+
+        {error && (
+          <p className="text-sm text-red-600 mt-3">{error}</p>
+        )}
+      </div>
+
+      {order && (
+        <div className="card p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">حالة الطلب</h3>
+              </div>
+              <p className="text-sm text-gray-600">{getOrderStatusLabel(order.status)}</p>
+              <p className="text-xs text-gray-400 mt-2">#{order.id.slice(0, 8)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">تاريخ الطلب</p>
+              <p className="font-medium text-gray-900">{formatDate(order.created_at)}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 mt-6">
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-gray-400">اسم العميل</p>
+                <p className="font-medium text-gray-900">{order.customer_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">الهاتف</p>
+                <p className="font-medium text-gray-900">{order.customer_phone}</p>
+              </div>
+              {order.customer_email && (
+                <div>
+                  <p className="text-xs text-gray-400">البريد الإلكتروني</p>
+                  <p className="font-medium text-gray-900">{order.customer_email}</p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-gray-400">طريقة الدفع</p>
+                <p className="font-medium text-gray-900">{getPaymentMethodLabel(order.payment_method)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">الإجمالي</p>
+                <p className="font-semibold text-gray-900">{formatCurrency(order.total_amount)}</p>
+              </div>
+              {order.notes && (
+                <div>
+                  <p className="text-xs text-gray-400">ملاحظات العميل</p>
+                  <p className="text-sm text-gray-700">{order.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 bg-gray-50 rounded-2xl p-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">تفاصيل المنتجات</h4>
+            <div className="space-y-3">
+              {order.order_items?.map((item: any) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                  <div>
+                    <p className="font-medium text-gray-900">{item.product_name}</p>
+                    <p className="text-xs text-gray-500">الكمية: {item.quantity}</p>
+                  </div>
+                  <p className="font-medium text-gray-900">{formatCurrency(item.product_price * item.quantity)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {order.payments?.[0]?.receipt_url && (
+            <div className="mt-6">
+              <ReceiptLink receiptUrl={order.payments[0].receipt_url} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { OrderStatusUpdater } from "./order-status-updater";
 import { ReceiptLink } from "@/components/receipt-link";
 import { ShoppingCart, Receipt } from "lucide-react";
+import type { OrderStatus } from "@/types";
 
 export default async function MerchantOrdersPage() {
   const supabase = await createClient();
@@ -115,9 +116,9 @@ export default async function MerchantOrdersPage() {
               </div>
 
               {/* Status updater */}
-              {order.status === "pending" && (
+              {(order.status === "pending" || order.status === "approved") && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <OrderStatusUpdater orderId={order.id} />
+                  <OrderStatusUpdater orderId={order.id} status={order.status as OrderStatus} />
                 </div>
               )}
             </div>

@@ -19,6 +19,7 @@ export function CheckoutForm({ storeId, storeSlug, storeName, paymentMethod }: C
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<string>(
     paymentMethod?.cash_on_delivery ? "cash_on_delivery" :
@@ -80,6 +81,7 @@ export function CheckoutForm({ storeId, storeSlug, storeName, paymentMethod }: C
       }
 
       clearCart();
+      setOrderId(data.orderId ?? null);
       setOrderDone(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء إرسال الطلب");
@@ -94,16 +96,29 @@ export function CheckoutForm({ storeId, storeSlug, storeName, paymentMethod }: C
           <CheckCircle className="w-10 h-10 text-green-600" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">تم إرسال طلبك بنجاح!</h2>
-        <p className="text-gray-500 mb-6">
-          سيتواصل معك صاحب المتجر قريباً لتأكيد طلبك
+        <p className="text-gray-500 mb-2">
+          سيتواصل معك صاحب المتجر قريباً لتأكيد طلبك.
         </p>
-        <a
-          href={`/store/${storeSlug}`}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          <ShoppingBag className="w-5 h-5" />
-          متابعة التسوق
-        </a>
+        {orderId && (
+          <p className="text-sm text-gray-500 mb-6">
+            رقم الطلب: <span className="font-mono text-gray-900">{orderId.slice(0, 8)}</span>
+          </p>
+        )}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          {orderId ? (
+            <a
+              href={`/store/${storeSlug}/track?orderId=${orderId}`}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              تتبع الطلب
+            </a>
+          ) : null}
+          <a href={`/store/${storeSlug}`} className="btn-secondary inline-flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5" />
+            متابعة التسوق
+          </a>
+        </div>
       </div>
     );
   }

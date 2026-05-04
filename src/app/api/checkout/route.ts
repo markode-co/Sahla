@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       receiptUrl = publicData.publicUrl;
     }
 
-    await createOrder({
+    const order = await createOrder({
       storeId,
       customerName,
       customerPhone,
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       receiptUrl,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, orderId: order.id });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "حدث خطأ غير متوقع" },

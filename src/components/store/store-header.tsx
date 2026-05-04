@@ -32,28 +32,33 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
               <p className="text-gray-500 mt-1 text-sm line-clamp-2">{store.description}</p>
             )}
 
-            {paymentMethod && (
-              <div className="flex flex-wrap items-center gap-3 mt-2">
-                {paymentMethod.instapay_username && (
-                  <div className="flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">
-                    <Smartphone className="w-3.5 h-3.5" />
-                    انستاباي
-                  </div>
-                )}
-                {paymentMethod.bank_name && (
-                  <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                    <Building2 className="w-3.5 h-3.5" />
-                    تحويل بنكي
-                  </div>
-                )}
-                {paymentMethod.cash_on_delivery && (
-                  <div className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
-                    <Truck className="w-3.5 h-3.5" />
-                    الدفع عند الاستلام
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-3 mt-2">
+              {paymentMethod?.instapay_username && (
+                <div className="flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">
+                  <Smartphone className="w-3.5 h-3.5" />
+                  انستاباي
+                </div>
+              )}
+              {paymentMethod?.bank_name && (
+                <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                  <Building2 className="w-3.5 h-3.5" />
+                  تحويل بنكي
+                </div>
+              )}
+              {paymentMethod?.cash_on_delivery && (
+                <div className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
+                  <Truck className="w-3.5 h-3.5" />
+                  الدفع عند الاستلام
+                </div>
+              )}
+              <a
+                href={`/store/${store.slug}/track`}
+                className="text-sm inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 text-primary-700 px-3 py-1.5 hover:bg-primary-100 transition"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                تتبع الطلب
+              </a>
+            </div>
           </div>
         </div>
       </div>

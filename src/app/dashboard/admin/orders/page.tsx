@@ -9,6 +9,7 @@ import { ReceiptLink } from "@/components/receipt-link";
 import { ShoppingCart, Clock } from "lucide-react";
 import { OrderStatusUpdater } from "@/app/dashboard/merchant/orders/order-status-updater";
 import { MerchantActions } from "@/app/dashboard/admin/merchants/merchant-actions";
+import type { OrderStatus } from "@/types";
 
 const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
 
@@ -330,10 +331,10 @@ export default function AdminOrdersPage() {
                     <ReceiptLink receiptUrl={payment.receipt_url} />
                   )}
 
-                  {/* Order actions — pending only */}
-                  {isPending && (
+                  {/* Order actions — pending or approved */}
+                  {(order.status === "pending" || order.status === "approved") && (
                     <div className="pt-3 border-t border-gray-100">
-                      <OrderStatusUpdater orderId={order.id} />
+                      <OrderStatusUpdater orderId={order.id} status={order.status as OrderStatus} />
                     </div>
                   )}
                 </div>
