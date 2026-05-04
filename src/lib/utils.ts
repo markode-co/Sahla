@@ -49,12 +49,19 @@ export function stripMissingPostgrestColumns<T extends Record<string, unknown>>(
   const message = typeof error === "object" && error && "message" in error ? (error as any).message : undefined;
   if (typeof message !== "string") return payload;
 
-  const match = message.match(/Could not find the '([^']+)' column/);
-  if (!match) return payload;
+  const matches = Array.from(message.matchAll(/Could not find the '([^']+)' column/g));
+  if (matches.length === 0) return payload;
 
-  const missingColumn = match[1];
-  const { [missingColumn]: _, ...rest } = payload;
-  return rest as T;
+  let nextPayload = { ...payload };
+  for (const match of matches) {
+    const missingColumn = match[1];
+    if (missingColumn in nextPayload) {
+      const { [missingColumn]: _, ...rest } = nextPayload;
+      nextPayload = rest as T;
+    }
+  }
+
+  return nextPayload;
 }
 
 export function getOrderStatusLabel(status: string): string {

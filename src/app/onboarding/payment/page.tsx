@@ -75,22 +75,21 @@ export default function PaymentSetupPage() {
       return;
     }
 
-    let { error } = await (existing?.id
-      ? supabase.from("payment_methods").update(updatePayload).eq("id", existing.id)
-      : supabase.from("payment_methods").insert(insertPayload));
+    let currentPayload = existing?.id ? updatePayload : insertPayload;
+    let error = null as any;
 
-    if (error) {
-      const sanitizedPayload = stripMissingPostgrestColumns(
-        existing?.id ? updatePayload : insertPayload,
-        error
-      );
+    do {
+      ({ error } = await (existing?.id
+        ? supabase.from("payment_methods").update(currentPayload).eq("id", existing.id)
+        : supabase.from("payment_methods").insert(currentPayload)));
 
-      if (sanitizedPayload !== (existing?.id ? updatePayload : insertPayload)) {
-        ({ error } = await (existing?.id
-          ? supabase.from("payment_methods").update(sanitizedPayload).eq("id", existing.id)
-          : supabase.from("payment_methods").insert(sanitizedPayload)));
-      }
-    }
+      if (!error) break;
+
+      const sanitizedPayload = stripMissingPostgrestColumns(currentPayload, error);
+      const payloadChanged = Object.keys(sanitizedPayload).length !== Object.keys(currentPayload).length;
+      currentPayload = sanitizedPayload;
+      if (!payloadChanged) break;
+    } while (error);
 
     if (error) {
       console.error("Payment method save error:", JSON.stringify(error, null, 2));
