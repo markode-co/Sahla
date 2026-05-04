@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, Phone, Smartphone, Building2, Truck, Download } from "lucide-react";
+import { MapPin, Phone, Smartphone, Building2, Truck, Download, LogOut } from "lucide-react";
 import type { Store, PaymentMethod } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { triggerAppInstall, setupPWAPromptListener, isAppInstalled } from "@/lib/pwa-utils";
@@ -15,6 +15,7 @@ interface StoreHeaderProps {
 export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
   const [session, setSession] = useState<any>(null);
   const [isAppInstalledState, setIsAppInstalledState] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     setupPWAPromptListener();
@@ -38,6 +39,19 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      // Redirect to store page after logout
+      window.location.href = `/store/${store.slug}`;
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="bg-white border-b border-gray-100 shadow-sm">
@@ -112,9 +126,27 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
                 </Link>
               </div>
             )}
+            {session && (
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <LogOut className="w-4 h-4" />
+                {isLoggingOut ? "جاري الخروج..." : "تسجيل الخروج"}
+              </button>
+            )}
             {!isAppInstalledState && (
               <button
-                onClick={() => {
+                onClick={async () => {
+                  // Ensure manifest is updated before triggering install
+                  // This forces the browser to use the correct start_url for this store
+                  const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+                  if (manifestLink && !manifestLink.href.includes(`store=${store.slug}`)) {
+                    manifestLink.href = `/api/manifest?store=${store.slug}`;
+                    // Give the browser a moment to recognize the new manifest
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                  }
                   triggerAppInstall(store.name, "customer");
                   // Immediately hide the button after click
                   setIsAppInstalledState(true);

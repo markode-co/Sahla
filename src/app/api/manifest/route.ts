@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
         .eq("status", "approved")
         .single();
       store = slugStore;
+      // Override role to customer if accessing a store by slug
+      role = "customer";
     }
 
     // Generate manifest based on store data

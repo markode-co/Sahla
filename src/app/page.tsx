@@ -1,4 +1,4 @@
-import { ShoppingBag, Zap, Shield, BarChart3, ArrowLeft, Check, LayoutDashboard } from "lucide-react";
+import { ShoppingBag, Zap, Shield, BarChart3, ArrowLeft, Check, LayoutDashboard, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 const features = [
@@ -77,13 +77,24 @@ export default async function LandingPage() {
 
           <div className="flex flex-wrap items-center gap-3 justify-end">
             {isLoggedIn ? (
-              <a
-                href={dashboardHref}
-                className="btn-primary text-sm flex items-center gap-2"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                لوحة التحكم
-              </a>
+              <>
+                <a
+                  href={dashboardHref}
+                  className="btn-primary text-sm flex items-center gap-2"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  لوحة التحكم
+                </a>
+                <form action="/api/auth/logout" method="post">
+                  <button
+                    type="submit"
+                    className="text-red-600 hover:text-red-700 font-medium transition-colors text-sm flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    تسجيل الخروج
+                  </button>
+                </form>
+              </>
             ) : (
               <>
                 <a
@@ -118,13 +129,24 @@ export default async function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isLoggedIn ? (
-              <a
-                href={dashboardHref}
-                className="btn-primary flex items-center justify-center gap-2 text-base px-8 py-3"
-              >
-                <LayoutDashboard className="w-5 h-5" />
-                اذهب إلى لوحة التحكم
-              </a>
+              <>
+                <a
+                  href={dashboardHref}
+                  className="btn-primary flex items-center justify-center gap-2 text-base px-8 py-3"
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  اذهب إلى لوحة التحكم
+                </a>
+                <form action="/api/auth/logout" method="post">
+                  <button
+                    type="submit"
+                    className="btn-secondary flex items-center justify-center gap-2 text-base px-8 py-3"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    تسجيل الخروج
+                  </button>
+                </form>
+              </>
             ) : (
               <>
                 <a

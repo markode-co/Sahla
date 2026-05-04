@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Bell, Home, LogOut, Settings, ShoppingBag, User } from "lucide-react";
+import { Bell, Home, Settings, ShoppingBag, User } from "lucide-react";
 import { AuthModal } from "@/components/store/auth-modal";
 import { StoreHeader } from "@/components/store/store-header";
+import { LogoutButton } from "@/components/store/logout-button";
 import type { Store, PaymentMethod } from "@/types";
 
 interface Props {
@@ -64,15 +65,7 @@ export default async function StoreLayout({ params, children }: Props) {
                   </Link>
                 );
               })}
-              <form action="/api/auth/logout" method="post" className="inline">
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium hover:bg-red-100 transition"
-                >
-                  <LogOut className="w-4 h-4" />
-                  تسجيل الخروج
-                </button>
-              </form>
+              <LogoutButton storeSlug={slug} />
             </div>
           </div>
         </div>

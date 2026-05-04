@@ -12,7 +12,8 @@ export function DynamicManifest() {
 
         // Get current store from URL if on store page
         const currentPath = window.location.pathname;
-        const storeSlugMatch = currentPath.match(/^\/store\/([^\/]+)/);
+        // Extract store slug from paths like /store/my-store or /store/my-store/checkout
+        const storeSlugMatch = currentPath.match(/^\/store\/([a-zA-Z0-9-]+)/);
         const storeSlug = storeSlugMatch ? storeSlugMatch[1] : null;
 
         let manifestUrl = "/api/manifest";
@@ -24,6 +25,8 @@ export function DynamicManifest() {
         const link = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
         if (link) {
           link.href = manifestUrl;
+          // Force manifest reload by dispatching a custom event
+          window.dispatchEvent(new CustomEvent('manifest-updated', { detail: { manifestUrl, storeSlug } }));
         }
 
         // Also update favicon if we have store data
