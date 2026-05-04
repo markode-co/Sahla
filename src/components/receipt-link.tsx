@@ -37,7 +37,7 @@ function isImageUrl(url: string) {
 }
 
 export function ReceiptLink({ receiptUrl, className = "", imageClassName = "w-20 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0" }: ReceiptLinkProps) {
-  const [resolvedUrl, setResolvedUrl] = useState(receiptUrl);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [showImage, setShowImage] = useState(true);
 
   const storageEntry = useMemo(() => parseReceiptUrl(receiptUrl), [receiptUrl]);
@@ -47,7 +47,7 @@ export function ReceiptLink({ receiptUrl, className = "", imageClassName = "w-20
 
     async function resolveSignedUrl() {
       if (!storageEntry) {
-        setResolvedUrl(receiptUrl);
+        if (!canceled) setResolvedUrl(receiptUrl);
         return;
       }
 
@@ -71,11 +71,16 @@ export function ReceiptLink({ receiptUrl, className = "", imageClassName = "w-20
     };
   }, [receiptUrl, storageEntry]);
 
+  // Don't render until we have a resolved URL
+  if (!resolvedUrl) {
+    return null;
+  }
+
   return (
     <div className={`mt-4 pt-4 border-t border-gray-100 flex items-start gap-3 ${className}`}>
       {showImage && isImageUrl(resolvedUrl) && (
         <img
-          src={encodeURI(resolvedUrl)}
+          src={resolvedUrl}
           alt="إيصال الدفع"
           className={imageClassName}
           onError={() => setShowImage(false)}
@@ -87,7 +92,7 @@ export function ReceiptLink({ receiptUrl, className = "", imageClassName = "w-20
           <p className="text-xs text-gray-500">إيصال التحويل</p>
         </div>
         <a
-          href={encodeURI(resolvedUrl)}
+          href={resolvedUrl}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-primary-600 hover:underline"

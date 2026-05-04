@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
-import { OrderTrackingForm } from "../track/order-tracking-form";
+import OrderTrackingForm from "../track/order-tracking-form";
 
 interface Props {
   params: { slug: string };

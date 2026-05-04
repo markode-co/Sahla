@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { ServiceWorkerRegister } from "@/components/ui/sw-register";
+import { PWASetup } from "@/components/ui/pwa-setup";
 
 export const metadata: Metadata = {
   title: "سهلة - منصة التجارة الإلكترونية",
@@ -29,6 +30,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body suppressHydrationWarning>
+        <PWASetup />
         {children}
         <ServiceWorkerRegister />
         <Toaster

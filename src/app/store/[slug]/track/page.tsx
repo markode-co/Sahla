@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
-import { OrderTrackingForm } from "./order-tracking-form";
+import OrderTrackingForm from "./order-tracking-form";
 
 interface Props {
   params: { slug: string };
@@ -42,23 +41,15 @@ export default async function TrackOrderPage({ params, searchParams }: Props) {
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <div className="max-w-3xl mx-auto px-4 py-10">
         <div className="mb-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="page-title">تتبع الطلب</h1>
-              <p className="text-gray-500 mt-1">
-                أدخل رقم الطلب ورقم الهاتف لمعرفة حالة طلبك من {store.name}.
-              </p>
-            </div>
-            <Link
-              href="/dashboard"
-              className="btn-secondary inline-flex items-center justify-center px-4 py-2"
-            >
-              العودة إلى لوحة التحكم
-            </Link>
+          <div>
+            <h1 className="page-title">تتبع الطلب</h1>
+            <p className="text-gray-500 mt-1">
+              أدخل رقم الطلب ورقم الهاتف لمعرفة حالة طلبك من {store.name}.
+            </p>
           </div>
         </div>
 
-        <OrderTrackingForm storeSlug={slug} initialOrderId={searchParams.orderId} />
+        <OrderTrackingForm storeSlug={slug} />
       </div>
     </div>
   );

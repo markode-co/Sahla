@@ -133,4 +133,9 @@ for (const size of [192, 512]) {
   const out = path.join(outDir, `icon-${size}.png`);
   fs.writeFileSync(out, buf);
   console.log(`✓ Created ${out} (${buf.length} bytes)`);
+
+  // Also create store icons (same for now, can be customized later)
+  const storeOut = path.join(outDir, `store-icon-${size}.png`);
+  fs.writeFileSync(storeOut, buf);
+  console.log(`✓ Created ${storeOut} (${buf.length} bytes)`);
 }

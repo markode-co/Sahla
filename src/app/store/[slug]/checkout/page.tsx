@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CheckoutForm } from "./checkout-form";
 
@@ -16,6 +16,11 @@ export default async function CheckoutPage({ params }: Props) {
     .eq("slug", slug)
     .eq("status", "approved")
     .single();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/store/${slug}/login?next=/store/${slug}/checkout`);
+  }
 
   if (!store) notFound();
 

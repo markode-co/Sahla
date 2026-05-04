@@ -8,11 +8,10 @@ import { ReceiptLink } from "@/components/receipt-link";
 
 interface OrderTrackingFormProps {
   storeSlug: string;
-  initialOrderId?: string;
 }
 
-export function OrderTrackingForm({ storeSlug, initialOrderId }: OrderTrackingFormProps) {
-  const [orderId, setOrderId] = useState(initialOrderId ?? "");
+export default function OrderTrackingForm({ storeSlug }: OrderTrackingFormProps) {
+  const [orderId, setOrderId] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<any | null>(null);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Store } from "lucide-react";
+import { Store, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,7 @@ export function StoreSettingsForm({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     name: store.name,
     description: store.description ?? "",
@@ -80,6 +81,30 @@ export function StoreSettingsForm({
       router.refresh();
     }
     setSaving(false);
+  }
+
+  async function handleDeleteStore() {
+    if (!confirm("هل أنت متأكد من حذف المتجر؟ هذا الإجراء لا يمكن التراجع عنه وسيحذف جميع المنتجات والطلبات.")) return;
+
+    setDeleting(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("يرجى تسجيل الدخول مرة أخرى");
+        return;
+      }
+
+      // Delete store and related data
+      await supabase.from("stores").delete().eq("owner_id", user.id);
+
+      toast.success("تم حذف المتجر بنجاح");
+      router.push("/dashboard");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "حدث خطأ في حذف المتجر");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -188,6 +213,26 @@ export function StoreSettingsForm({
           </button>
         </div>
       </form>
+
+      <div className="border-t border-gray-100 pt-4 mt-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+            <Trash2 className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-red-900">حذف المتجر</h2>
+            <p className="text-red-600 mt-1">هذا الإجراء لا يمكن التراجع عنه وسيحذف جميع المنتجات والطلبات.</p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleDeleteStore}
+          disabled={deleting}
+          className="btn-secondary bg-red-600 hover:bg-red-700 text-white border-red-600"
+        >
+          {deleting ? "جاري الحذف..." : "حذف المتجر"}
+        </button>
+      </div>
     </div>
   );
 }

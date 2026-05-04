@@ -159,17 +159,20 @@ export function Sidebar({
 
           {/* Store link — merchant only */}
           {!isOnAdminPages && role === "merchant" && storeSlug && (
-            <Link
-              href={`/store/${storeSlug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={closeMenu}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
-            >
-              <Store className="w-5 h-5 flex-shrink-0" />
-              المتجر العام
-              <ChevronLeft className="w-4 h-4 mr-auto" />
-            </Link>
+            <div className="space-y-1">
+              <Link
+                href={`/store/${storeSlug}/login?next=/store/${storeSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+              >
+                <Store className="w-5 h-5 flex-shrink-0" />
+                المتجر العام
+                <ChevronLeft className="w-4 h-4 mr-auto" />
+              </Link>
+              <p className="text-xs text-gray-400 px-3">https://sahla.app/store/{storeSlug}</p>
+            </div>
           )}
 
           {/* Super admin switcher */}
