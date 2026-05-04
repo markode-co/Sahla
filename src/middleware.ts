@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextResponse, type NextRequest } from "next/server";
 
 const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
@@ -63,11 +63,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Fetch profile using admin client to bypass RLS
-  const adminClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  );
+  const adminClient = createAdminClient();
 
   const { data: profile } = await adminClient
     .from("users")
@@ -98,12 +94,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Role guards ──────────────────────────────────────────────────────────────
-  if (pathname.startsWith("/dashboard/admin") && role !== "admin") {
-    return NextResponse.redirect(new URL("/dashboard/merchant", request.url));
-  }
+  if (!isSuperAdmin) {
+    if (pathname.startsWith("/dashboard/admin") && role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard/merchant", request.url));
+    }
 
-  if (pathname.startsWith("/dashboard/merchant") && role === "admin") {
-    return NextResponse.redirect(new URL("/dashboard/admin", request.url));
+    if (pathname.startsWith("/dashboard/merchant") && role === "admin") {
+      return NextResponse.redirect(new URL("/dashboard/admin", request.url));
+    }
   }
 
   // ── Merchant dashboard: check store + subscription ───────────────────────────
@@ -146,6 +144,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|api/|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

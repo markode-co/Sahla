@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FileText, ArrowLeft, Upload, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
+import { useOnboardingCheck } from "@/hooks/use-onboarding-check";
 
 interface DocField {
   key: "national_id" | "commercial_register" | "tax_card";
@@ -20,6 +21,7 @@ const DOC_FIELDS: DocField[] = [
 
 export default function DocumentsPage() {
   const router = useRouter();
+  useOnboardingCheck(); // Check onboarding state and redirect if needed
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<Record<string, File | null>>({
     national_id: null,

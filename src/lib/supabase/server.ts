@@ -27,10 +27,20 @@ export async function createClient() {
   );
 }
 
+function getServiceRoleKey() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error(
+      "Missing SUPABASE_SERVICE_ROLE_KEY. Add it to .env.local from .env.local.example."
+    );
+  }
+  return key;
+}
+
 export function createAdminClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getServiceRoleKey(),
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

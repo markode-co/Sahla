@@ -1,13 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Minus, Plus, Trash2, ShoppingBag, Upload, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useCartStore } from "@/store/cart";
-import { createOrder } from "@/actions/orders";
-import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, getPaymentMethodLabel } from "@/lib/utils";
 import type { PaymentMethod } from "@/types";
 
@@ -19,7 +16,6 @@ interface CheckoutFormProps {
 }
 
 export function CheckoutForm({ storeId, storeSlug, storeName, paymentMethod }: CheckoutFormProps) {
-  const router = useRouter();
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
@@ -59,42 +55,34 @@ export function CheckoutForm({ storeId, storeSlug, storeName, paymentMethod }: C
 
     setLoading(true);
     try {
-      let receiptUrl: string | null = null;
+      const formData = new FormData();
+      formData.append("storeId", storeId);
+      formData.append("customerName", form.name);
+      formData.append("customerPhone", form.phone);
+      formData.append("customerAddress", form.address);
+      formData.append("customerEmail", form.email || "");
+      formData.append("paymentMethod", selectedPayment);
+      formData.append("notes", form.notes || "");
+      formData.append("items", JSON.stringify(items));
 
-      // Upload receipt client-side if needed
-      if (receiptFile && currentPayment?.needsReceipt) {
-        const supabase = createClient();
-        const ext = receiptFile.name.split(".").pop();
-        const filePath = `receipts/${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("receipts")
-          .upload(filePath, receiptFile, {
-            contentType: receiptFile.type || undefined,
-          });
-        if (!upErr) {
-          const { data: { publicUrl } } = supabase.storage
-            .from("receipts")
-            .getPublicUrl(filePath);
-          receiptUrl = publicUrl;
-        }
+      if (receiptFile) {
+        formData.append("receipt", receiptFile);
       }
 
-      await createOrder({
-        storeId,
-        customerName: form.name,
-        customerPhone: form.phone,
-        customerAddress: form.address,
-        customerEmail: form.email || undefined,
-        paymentMethod: selectedPayment,
-        notes: form.notes || undefined,
-        items,
-        receiptUrl,
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        body: formData,
       });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "فشل إرسال الطلب");
+      }
 
       clearCart();
       setOrderDone(true);
     } catch (err) {
-      toast.error("حدث خطأ أثناء إرسال الطلب");
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء إرسال الطلب");
     }
     setLoading(false);
   }

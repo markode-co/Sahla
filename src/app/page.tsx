@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ShoppingBag, Zap, Shield, BarChart3, ArrowLeft, Check, LayoutDashboard } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -78,24 +77,24 @@ export default async function LandingPage() {
 
           <div className="flex items-center gap-3">
             {isLoggedIn ? (
-              <Link
+              <a
                 href={dashboardHref}
                 className="btn-primary text-sm flex items-center gap-2"
               >
                 <LayoutDashboard className="w-4 h-4" />
                 لوحة التحكم
-              </Link>
+              </a>
             ) : (
               <>
-                <Link
+                <a
                   href="/login"
                   className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
                 >
                   تسجيل الدخول
-                </Link>
-                <Link href="/register" className="btn-primary text-sm">
+                </a>
+                <a href="/register" className="btn-primary text-sm">
                   ابدأ مجاناً
-                </Link>
+                </a>
               </>
             )}
           </div>
@@ -119,28 +118,28 @@ export default async function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isLoggedIn ? (
-              <Link
+              <a
                 href={dashboardHref}
                 className="btn-primary flex items-center justify-center gap-2 text-base px-8 py-3"
               >
                 <LayoutDashboard className="w-5 h-5" />
                 اذهب إلى لوحة التحكم
-              </Link>
+              </a>
             ) : (
               <>
-                <Link
+                <a
                   href="/register"
                   className="btn-primary flex items-center justify-center gap-2 text-base px-8 py-3"
                 >
                   ابدأ مجاناً الآن
                   <ArrowLeft className="w-5 h-5" />
-                </Link>
-                <Link
+                </a>
+                <a
                   href="/login"
                   className="btn-secondary flex items-center justify-center gap-2 text-base px-8 py-3"
                 >
                   تسجيل الدخول
-                </Link>
+                </a>
               </>
             )}
           </div>
@@ -199,7 +198,7 @@ export default async function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
+                <a
                   href={isLoggedIn ? dashboardHref : "/register"}
                   className={`block text-center py-2.5 px-5 rounded-xl font-semibold transition-all ${
                     plan.popular
@@ -208,7 +207,7 @@ export default async function LandingPage() {
                   }`}
                 >
                   {isLoggedIn ? "لوحة التحكم" : "ابدأ الآن"}
-                </Link>
+                </a>
               </div>
             ))}
           </div>

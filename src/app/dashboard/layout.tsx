@@ -1,17 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Sidebar } from "@/components/dashboard/sidebar";
-import { generateLogoInitials } from "@/lib/utils";
+import { DashboardLayoutClient } from "./layout-client";
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) {
+    redirect("/login");
+  }
 
   const { data: profile } = await supabase
     .from("users")
@@ -19,7 +16,9 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
-  if (!profile) redirect("/login");
+  if (!profile) {
+    redirect("/login");
+  }
 
   const { data: store } = await supabase
     .from("stores")
@@ -29,22 +28,13 @@ export default async function DashboardLayout({
     .limit(1)
     .maybeSingle();
 
-  const userInitials = generateLogoInitials(profile.full_name ?? profile.email);
-
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="rtl">
-      <Sidebar
-        role={profile.role}
-        storeName={store?.name}
-        storeSlug={store?.slug}
-        storeInitials={store?.logo_initials}
-        storeColor={store?.logo_color}
-        userEmail={user.email ?? profile.email}
-        userInitials={userInitials}
-      />
-      <main className="flex-1 lg:p-8 p-4 pt-20 lg:pt-8 min-w-0">
-        {children}
-      </main>
-    </div>
+    <DashboardLayoutClient
+      profile={profile}
+      store={store}
+      user={user}
+    >
+      {children}
+    </DashboardLayoutClient>
   );
 }

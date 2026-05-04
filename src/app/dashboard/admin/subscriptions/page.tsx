@@ -1,31 +1,98 @@
-import { redirect } from "next/navigation";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, getPlanLabel } from "@/lib/utils";
 import { CreditCard, Clock, ImageIcon } from "lucide-react";
 import { SubscriptionManager } from "./subscription-manager";
+import { ReceiptLink } from "@/components/receipt-link";
 
 const SUPER_ADMIN_EMAIL = "ca.markode@gmail.com";
 
-export default async function AdminSubscriptionsPage() {
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  if (!user) redirect("/login");
-  if (user.email !== SUPER_ADMIN_EMAIL) {
-    const { data: profile } = await authClient.from("users").select("role").eq("id", user.id).single();
-    if (profile?.role !== "admin") redirect("/dashboard/merchant");
+type Subscription = {
+  id: string;
+  user_id: string;
+  plan: string;
+  status: string;
+  receipt_url?: string;
+  created_at: string;
+  started_at?: string;
+  users: {
+    full_name?: string;
+    email: string;
+  } | null;
+};
+
+export default function AdminSubscriptionsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const authClient = createClient();
+        const { data: { user } } = await authClient.auth.getUser();
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
+        if (user.email !== SUPER_ADMIN_EMAIL) {
+          const { data: profile } = await authClient.from("users").select("role").eq("id", user.id).single();
+          if (profile?.role !== "admin") {
+            router.replace("/dashboard/merchant");
+            return;
+          }
+        }
+
+        const supabase = createClient();
+
+        const { data: subscriptionsData } = await supabase
+          .from("subscriptions")
+          .select(`*, users(email, full_name)`)
+          .order("created_at", { ascending: false });
+
+        setSubscriptions(subscriptionsData ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "حدث خطأ غير متوقع");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="page-title">الاشتراكات</h1>
+        <div className="card p-16 text-center">
+          <CreditCard className="w-16 h-16 mx-auto mb-4 text-gray-200 animate-pulse" />
+          <p className="text-gray-500">جاري تحميل الاشتراكات...</p>
+        </div>
+      </div>
+    );
   }
 
-  const supabase = createAdminClient();
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="page-title">الاشتراكات</h1>
+        <div className="card p-16 text-center">
+          <CreditCard className="w-16 h-16 mx-auto mb-4 text-gray-200" />
+          <p className="text-gray-500">حدث خطأ في تحميل الاشتراكات</p>
+          <p className="text-sm text-gray-400 mt-1">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
-  const { data: subscriptions } = await supabase
-    .from("subscriptions")
-    .select(`*, users(email, full_name)`)
-    .order("created_at", { ascending: false });
-
-  const list = subscriptions ?? [];
-  const pending = list.filter((s) => s.status === "pending");
-  const rest = list.filter((s) => s.status !== "pending");
+  const pending = subscriptions.filter((s) => s.status === "pending");
+  const rest = subscriptions.filter((s) => s.status !== "pending");
   const sorted = [...pending, ...rest];
 
   const statusVariant: Record<string, "default" | "success" | "warning" | "danger"> = {
@@ -47,14 +114,14 @@ export default async function AdminSubscriptionsPage() {
       <div>
         <h1 className="page-title">الاشتراكات</h1>
         <p className="text-gray-500 mt-1">
-          {list.length} اشتراك
+          {subscriptions.length} اشتراك
           {pending.length > 0 && (
             <span className="text-orange-600"> · {pending.length} ينتظر المراجعة</span>
           )}
         </p>
       </div>
 
-      {list.length === 0 ? (
+      {subscriptions.length === 0 ? (
         <div className="card p-16 text-center">
           <CreditCard className="w-16 h-16 mx-auto mb-4 text-gray-200" />
           <p className="text-gray-400">لا توجد اشتراكات بعد</p>
@@ -62,7 +129,7 @@ export default async function AdminSubscriptionsPage() {
       ) : (
         <div className="space-y-3">
           {sorted.map((sub) => {
-            const merchant = sub.users as { full_name?: string; email: string } | null;
+            const merchant = sub.users;
             const isPending = sub.status === "pending";
 
             return (
@@ -84,7 +151,7 @@ export default async function AdminSubscriptionsPage() {
                       <Badge variant="info">{getPlanLabel(sub.plan)}</Badge>
                     </div>
                     <p className="text-xs text-gray-400">{merchant?.email}</p>
-                    <p className="text-xs text-gray-400">{formatDate(sub.started_at)}</p>
+                    <p className="text-xs text-gray-400">{formatDate(sub.started_at || sub.created_at)}</p>
                   </div>
 
                   {/* Actions */}
@@ -98,30 +165,7 @@ export default async function AdminSubscriptionsPage() {
 
                 {/* Receipt */}
                 {sub.receipt_url && (
-                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-start gap-3">
-                    <img
-                      src={sub.receipt_url}
-                      alt="إيصال الدفع"
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <ImageIcon className="w-3.5 h-3.5 text-gray-400" />
-                        <p className="text-xs text-gray-500">إيصال التحويل</p>
-                      </div>
-                      <a
-                        href={sub.receipt_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-primary-600 hover:underline"
-                      >
-                        عرض كاملاً ↗
-                      </a>
-                    </div>
-                  </div>
+                  <ReceiptLink receiptUrl={sub.receipt_url} />
                 )}
               </div>
             );

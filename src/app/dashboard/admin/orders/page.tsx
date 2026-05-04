@@ -1,7 +1,11 @@
-import { redirect } from "next/navigation";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate, getOrderStatusLabel, getPaymentMethodLabel } from "@/lib/utils";
+import { ReceiptLink } from "@/components/receipt-link";
 import { ShoppingCart, Clock } from "lucide-react";
 import { OrderStatusUpdater } from "@/app/dashboard/merchant/orders/order-status-updater";
 import { MerchantActions } from "@/app/dashboard/admin/merchants/merchant-actions";
@@ -24,79 +28,169 @@ const statusOrder: Record<string, number> = {
   cancelled: 4,
 };
 
-export default async function AdminOrdersPage() {
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  if (!user) redirect("/login");
-  if (user.email !== SUPER_ADMIN_EMAIL) {
-    const { data: profile } = await authClient.from("users").select("role").eq("id", user.id).single();
-    if (profile?.role !== "admin") redirect("/dashboard/merchant");
-  }
+type Order = {
+  id: string;
+  store_id: string;
+  user_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_address: string;
+  customer_email: string | null;
+  status: string;
+  payment_method: string;
+  notes: string | null;
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+  items: any[];
+};
 
-  const supabase = createAdminClient();
+type Store = {
+  id: string;
+  name: string;
+  slug: string;
+  user_id: string;
+  created_at: string;
+};
 
-  // ── Pending stores awaiting approval ──────────────────────────────────────
-  const { data: pendingStores } = await supabase
-    .from("stores")
-    .select("id, name, slug, user_id, created_at")
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
+type User = {
+  id: string;
+  full_name: string | null;
+  email: string;
+  phone: string | null;
+};
 
-  const pendingStoreUserIds = (pendingStores ?? []).map((s) => s.user_id);
-  const usersMap = new Map<string, { full_name: string | null; email: string; phone: string | null }>();
-  if (pendingStoreUserIds.length > 0) {
-    const { data: users } = await supabase
-      .from("users")
-      .select("id, full_name, email, phone")
-      .in("id", pendingStoreUserIds);
-    (users ?? []).forEach((u) => usersMap.set(u.id, u));
-  }
+type Payment = {
+  id: string;
+  order_id: string;
+  receipt_url: string | null;
+};
 
-  // ── Orders ────────────────────────────────────────────────────────────────
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select("*")
-    .order("created_at", { ascending: false });
+export default function AdminOrdersPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [storesMap, setStoresMap] = useState<Map<string, string>>(new Map());
+  const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());
+  const [paymentsMap, setPaymentsMap] = useState<Map<string, Payment>>(new Map());
+  const [pendingStores, setPendingStores] = useState<(Store & { user: User })[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  if (error) {
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const authClient = createClient();
+        const { data: { user } } = await authClient.auth.getUser();
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
+        if (user.email !== SUPER_ADMIN_EMAIL) {
+          const { data: profile } = await authClient.from("users").select("role").eq("id", user.id).single();
+          if (profile?.role !== "admin") {
+            router.replace("/dashboard/merchant");
+            return;
+          }
+        }
+
+        const supabase = createClient();
+
+        // ── Pending stores awaiting approval ──────────────────────────────────────
+        const { data: pendingStoresData } = await supabase
+          .from("stores")
+          .select("id, name, slug, user_id, created_at")
+          .eq("status", "pending")
+          .order("created_at", { ascending: true });
+
+        const pendingStoreUserIds = (pendingStoresData ?? []).map((s) => s.user_id);
+        const usersMapTemp = new Map<string, User>();
+        if (pendingStoreUserIds.length > 0) {
+          const { data: users } = await supabase
+            .from("users")
+            .select("id, full_name, email, phone")
+            .in("id", pendingStoreUserIds);
+          (users ?? []).forEach((u) => usersMapTemp.set(u.id, u));
+        }
+
+        const pendingStoresWithUsers = (pendingStoresData ?? []).map(store => ({
+          ...store,
+          user: usersMapTemp.get(store.user_id)!,
+        }));
+
+        // ── Orders ────────────────────────────────────────────────────────────────
+        const { data: ordersData, error: ordersError } = await supabase
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (ordersError) {
+          setError(ordersError.message);
+          return;
+        }
+
+        const ordersList = ordersData ?? [];
+
+        // Store names map
+        const storeIds = Array.from(new Set(ordersList.map((o) => o.store_id).filter(Boolean)));
+        const storesMapTemp = new Map<string, string>();
+        if (storeIds.length > 0) {
+          const { data: stores } = await supabase
+            .from("stores")
+            .select("id, name")
+            .in("id", storeIds);
+          (stores ?? []).forEach((s) => storesMapTemp.set(s.id, s.name));
+        }
+
+        // Users map for orders
+        const userIds = Array.from(new Set(ordersList.map((o) => o.user_id).filter(Boolean)));
+        const usersMapOrders = new Map<string, User>();
+        if (userIds.length > 0) {
+          const { data: users } = await supabase
+            .from("users")
+            .select("id, full_name, email, phone")
+            .in("id", userIds);
+          (users ?? []).forEach((u) => usersMapOrders.set(u.id, u));
+        }
+
+        // Payments map
+        const orderIds = ordersList.map((o) => o.id);
+        const paymentsMapTemp = new Map<string, Payment>();
+        if (orderIds.length > 0) {
+          const { data: payments } = await supabase
+            .from("payments")
+            .select("id, order_id, receipt_url")
+            .in("order_id", orderIds);
+          (payments ?? []).forEach((p) => paymentsMapTemp.set(p.order_id, p));
+        }
+
+        setOrders(ordersList);
+        setStoresMap(storesMapTemp);
+        setUsersMap(usersMapOrders);
+        setPaymentsMap(paymentsMapTemp);
+        setPendingStores(pendingStoresWithUsers);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "حدث خطأ غير متوقع");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  if (loading) {
     return (
       <div className="space-y-6">
         <h1 className="page-title">الطلبات والإجراءات</h1>
         <div className="card p-16 text-center">
-          <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-200" />
-          <p className="text-gray-500">حدث خطأ في تحميل الطلبات</p>
-          <p className="text-sm text-gray-400 mt-1">{error.message}</p>
+          <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-200 animate-pulse" />
+          <p className="text-gray-500">جاري تحميل الطلبات...</p>
         </div>
       </div>
     );
   }
 
-  const list = orders ?? [];
-
-  // Store names map
-  const storeIds = Array.from(new Set(list.map((o) => o.store_id).filter(Boolean)));
-  const storesMap = new Map<string, string>();
-  if (storeIds.length > 0) {
-    const { data: stores } = await supabase
-      .from("stores")
-      .select("id, name")
-      .in("id", storeIds);
-    (stores ?? []).forEach((s) => storesMap.set(s.id, s.name));
-  }
-
-  // Payments map
-  const orderIds = list.map((o) => o.id);
-  const paymentsMap = new Map<string, { receipt_url: string | null }>();
-  if (orderIds.length > 0) {
-    const { data: payments } = await supabase
-      .from("payments")
-      .select("order_id, receipt_url")
-      .in("order_id", orderIds);
-    (payments ?? []).forEach((p) => paymentsMap.set(p.order_id, p));
-  }
-
-  // Sort: pending first
-  const sorted = [...list].sort((a, b) => {
+  const sorted = [...orders].sort((a, b) => {
     const diff = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
     if (diff !== 0) return diff;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -117,22 +211,22 @@ export default async function AdminOrdersPage() {
           <Clock className="w-5 h-5 text-orange-500" />
           <h2 className="font-semibold text-gray-800 text-base">
             متاجر تنتظر الموافقة
-            {(pendingStores ?? []).length > 0 && (
+            {pendingStores.length > 0 && (
               <span className="mr-2 text-sm font-normal text-orange-600">
-                ({(pendingStores ?? []).length})
+                ({pendingStores.length})
               </span>
             )}
           </h2>
         </div>
 
-        {!pendingStores || pendingStores.length === 0 ? (
+        {pendingStores.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-gray-400 text-sm">لا توجد متاجر تنتظر الموافقة</p>
           </div>
         ) : (
           <div className="space-y-3">
             {pendingStores.map((store) => {
-              const merchant = usersMap.get(store.user_id);
+              const merchant = store.user;
               return (
                 <div key={store.id} className="card p-5 border-r-4 border-r-orange-400">
                   <div className="flex items-start justify-between flex-wrap gap-4">
@@ -167,7 +261,7 @@ export default async function AdminOrdersPage() {
           <h2 className="font-semibold text-gray-800 text-base">
             طلبات العملاء
             <span className="mr-2 text-sm font-normal text-gray-500">
-              ({list.length} طلب
+              ({orders.length} طلب
               {pendingOrdersCount > 0 && (
                 <span className="text-orange-600"> · {pendingOrdersCount} معلّق</span>
               )}
@@ -176,7 +270,7 @@ export default async function AdminOrdersPage() {
           </h2>
         </div>
 
-        {list.length === 0 ? (
+        {orders.length === 0 ? (
           <div className="card p-16 text-center">
             <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-200" />
             <p className="text-gray-400">لا توجد طلبات بعد</p>
@@ -233,27 +327,7 @@ export default async function AdminOrdersPage() {
 
                   {/* Receipt image */}
                   {payment?.receipt_url && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-xl flex items-start gap-3">
-                      <img
-                        src={payment.receipt_url}
-                        alt="إيصال التحويل"
-                        className="w-20 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">صورة إيصال التحويل</p>
-                        <a
-                          href={payment.receipt_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm text-primary-600 hover:underline"
-                        >
-                          عرض الصورة كاملة ↗
-                        </a>
-                      </div>
-                    </div>
+                    <ReceiptLink receiptUrl={payment.receipt_url} />
                   )}
 
                   {/* Order actions — pending only */}

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate, getOrderStatusLabel, getPaymentMethodLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { OrderStatusUpdater } from "./order-status-updater";
+import { ReceiptLink } from "@/components/receipt-link";
 import { ShoppingCart, Receipt } from "lucide-react";
 
 export default async function MerchantOrdersPage() {
@@ -51,11 +52,6 @@ export default async function MerchantOrdersPage() {
     rejected: "danger",
     cancelled: "default",
     delivered: "info",
-  };
-
-  const getReceiptImage = (url: string | null | undefined) => {
-    if (!url) return false;
-    return /\.(jpe?g|png|gif|webp|avif)$/i.test(url);
   };
 
   return (
@@ -114,24 +110,7 @@ export default async function MerchantOrdersPage() {
                   طريقة الدفع: <span className="font-medium text-gray-700">{getPaymentMethodLabel(order.payment_method)}</span>
                 </span>
                 {order.payments?.[0]?.receipt_url && (
-                  <div className="space-y-2">
-                    <a
-                      href={order.payments[0].receipt_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700"
-                    >
-                      <Receipt className="w-4 h-4" />
-                      عرض الإيصال
-                    </a>
-                    {getReceiptImage(order.payments[0].receipt_url) && (
-                      <img
-                        src={order.payments[0].receipt_url}
-                        alt="إيصال الدفع"
-                        className="w-24 h-24 object-cover rounded-lg border border-gray-200"
-                      />
-                    )}
-                  </div>
+                  <ReceiptLink receiptUrl={order.payments[0].receipt_url} />
                 )}
               </div>
 

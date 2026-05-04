@@ -6,9 +6,11 @@ import { Store, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { generateLogoInitials, generateLogoColor, slugify } from "@/lib/utils";
+import { useOnboardingCheck } from "@/hooks/use-onboarding-check";
 
 export default function StoreSetupPage() {
   const router = useRouter();
+  useOnboardingCheck(); // Check onboarding state and redirect if needed
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -18,47 +20,6 @@ export default function StoreSetupPage() {
   const [slugManual, setSlugManual] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-
-  // If user already has a store, skip to the right step
-  useEffect(() => {
-    const supabase = createClient();
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      const user = session.user;
-
-      const { data: store } = await supabase
-        .from("stores")
-        .select("id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!store) return;
-
-      // Has a store — check if subscription is also active
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("status")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (subscription?.status === "active") {
-        router.replace("/dashboard/merchant");
-      } else {
-        router.replace("/onboarding/payment");
-      }
-    })();
-  }, [router]);
-
-  useEffect(() => {
-    return () => {
-      if (logoPreview) {
-        URL.revokeObjectURL(logoPreview);
-      }
-    };
-  }, [logoPreview]);
 
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     const name = e.target.value;
@@ -171,6 +132,14 @@ toast.success("تم إنشاء المتجر بنجاح 🚀");
 router.push("/onboarding/payment");
 return;
 }
+  useEffect(() => {
+    return () => {
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview]);
+
   return (
     <div className="max-w-lg mx-auto">
       <div className="card p-8">

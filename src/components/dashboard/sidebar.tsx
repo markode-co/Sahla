@@ -46,6 +46,7 @@ const adminLinks = [
   { href: "/dashboard/admin/merchants", label: "التجار", icon: Users },
   { href: "/dashboard/admin/orders", label: "الطلبات", icon: ShoppingCart },
   { href: "/dashboard/admin/subscriptions", label: "الاشتراكات", icon: CreditCard },
+  { href: "/dashboard/admin/settings", label: "الإعدادات", icon: Settings },
 ];
 
 export function Sidebar({

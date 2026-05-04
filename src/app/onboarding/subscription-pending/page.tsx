@@ -1,7 +1,12 @@
+"use client";
+
 import { Clock, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { useOnboardingCheck } from "@/hooks/use-onboarding-check";
 
 export default function SubscriptionPendingPage() {
+  useOnboardingCheck(); // Check onboarding state and redirect if needed
+
   return (
     <div className="max-w-lg mx-auto">
       <div className="card p-10 text-center">

@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import type { SubscriptionPlan } from "@/types";
 import { PLAN_PRICES } from "@/types";
+import { useOnboardingCheck } from "@/hooks/use-onboarding-check";
 
 const PLANS = [
   {
@@ -55,6 +56,7 @@ const PLANS = [
 
 export default function SubscriptionPage() {
   const router = useRouter();
+  useOnboardingCheck(); // Check onboarding state and redirect if needed
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<SubscriptionPlan>("pro");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);

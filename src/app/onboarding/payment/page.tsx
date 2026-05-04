@@ -6,9 +6,11 @@ import { CreditCard, ArrowLeft, Smartphone, Building2, Truck } from "lucide-reac
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { stripMissingPostgrestColumns } from "@/lib/utils";
+import { useOnboardingCheck } from "@/hooks/use-onboarding-check";
 
 export default function PaymentSetupPage() {
   const router = useRouter();
+  useOnboardingCheck(); // Check onboarding state and redirect if needed
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     instapayUsername: "",
