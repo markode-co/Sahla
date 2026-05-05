@@ -21,7 +21,6 @@ const actionItems = [
 ];
 
 export function StoreProfilePage({ storeSlug, store }: StoreProfilePageProps) {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState<any>(null);
