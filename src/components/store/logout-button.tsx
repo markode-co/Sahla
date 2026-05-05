@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 interface LogoutButtonProps {
   storeSlug: string;
@@ -12,17 +11,15 @@ interface LogoutButtonProps {
 
 export function LogoutButton({ storeSlug, storeCustomDomain }: LogoutButtonProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const router = useRouter();
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
       const supabase = createClient();
       await supabase.auth.signOut();
-      // Redirect to the store page after logout.
+      // Redirect to the store page after logout and force full reload.
       const redirectUrl = storeCustomDomain ? "/" : `/store/${storeSlug}`;
-      router.push(redirectUrl);
-      router.refresh();
+      window.location.href = redirectUrl;
     } catch (error) {
       console.error("Logout error:", error);
       setIsLoggingOut(false);
