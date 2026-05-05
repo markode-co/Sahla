@@ -122,6 +122,76 @@ CREATE TRIGGER products_updated_at BEFORE UPDATE ON public.products
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- =====================
+-- PROMOTIONS
+CREATE TABLE IF NOT EXISTS public.promotions (
+  id               uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  store_id         uuid REFERENCES public.stores(id) ON DELETE CASCADE NOT NULL,
+  title            text NOT NULL,
+  description      text,
+  discount_percent integer DEFAULT 0 CHECK (discount_percent >= 0 AND discount_percent <= 100),
+  is_active        boolean DEFAULT true,
+  starts_at        timestamptz,
+  ends_at          timestamptz,
+  created_at       timestamptz DEFAULT now(),
+  updated_at       timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.promotions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Store owners can manage their promotions" ON public.promotions;
+DROP POLICY IF EXISTS "Public can read active promotions"   ON public.promotions;
+CREATE POLICY "Store owners can manage their promotions" ON public.promotions
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.stores WHERE id = store_id AND user_id = auth.uid())
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.stores WHERE id = store_id AND user_id = auth.uid())
+  );
+CREATE POLICY "Public can read active promotions" ON public.promotions
+  FOR SELECT USING (
+    is_active = true AND
+    (starts_at IS NULL OR starts_at <= now()) AND
+    (ends_at IS NULL OR ends_at >= now()) AND
+    EXISTS (SELECT 1 FROM public.stores WHERE id = store_id AND status = 'approved')
+  );
+
+DROP TRIGGER IF EXISTS promotions_updated_at ON public.promotions;
+CREATE TRIGGER promotions_updated_at BEFORE UPDATE ON public.promotions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- =====================
+-- NOTIFICATIONS
+-- =====================
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id     uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  store_id    uuid REFERENCES public.stores(id) ON DELETE CASCADE NOT NULL,
+  type        text NOT NULL CHECK (type IN ('order_update', 'promotion', 'system')),
+  title       text NOT NULL,
+  message     text,
+  order_id    uuid,
+  read        boolean DEFAULT false,
+  created_at  timestamptz DEFAULT now(),
+  updated_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can read own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "System can create notifications"  ON public.notifications;
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
+CREATE POLICY "Users can read own notifications" ON public.notifications
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "System can create notifications" ON public.notifications
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update own notifications" ON public.notifications
+  FOR UPDATE USING (auth.uid() = user_id);
+
+DROP TRIGGER IF EXISTS notifications_updated_at ON public.notifications;
+CREATE TRIGGER notifications_updated_at BEFORE UPDATE ON public.notifications
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- =====================
 -- ORDERS
 -- =====================
 CREATE TABLE IF NOT EXISTS public.orders (
@@ -338,7 +408,11 @@ INSERT INTO storage.buckets (id, name, public) VALUES ('store-logos', 'store-log
 INSERT INTO storage.buckets (id, name, public) VALUES ('products',    'products',    true)  ON CONFLICT (id) DO UPDATE SET public = true;
 INSERT INTO storage.buckets (id, name, public) VALUES ('documents',   'documents',   false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public) VALUES ('receipts',    'receipts',    true)  ON CONFLICT (id) DO UPDATE SET public = true;
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars',     'avatars',     true)  ON CONFLICT (id) DO UPDATE SET public = true;
 
+DROP POLICY IF EXISTS "Authenticated users can upload avatars"     ON storage.objects;
+DROP POLICY IF EXISTS "Public can view avatars"                    ON storage.objects;
+DROP POLICY IF EXISTS "Users can manage own avatars"               ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated users can upload store logos"    ON storage.objects;
 DROP POLICY IF EXISTS "Public can view store logos"                   ON storage.objects;
 DROP POLICY IF EXISTS "Store owners can update their logo"            ON storage.objects;
@@ -354,6 +428,25 @@ DROP POLICY IF EXISTS "Customers can upload payment receipts"         ON storage
 DROP POLICY IF EXISTS "Store owners can view payment receipts"        ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated users can upload receipts"       ON storage.objects;
 DROP POLICY IF EXISTS "Public can view receipts"                      ON storage.objects;
+
+CREATE POLICY "Authenticated users can upload avatars" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'avatars' AND
+    auth.uid() IS NOT NULL AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+CREATE POLICY "Public can view avatars" ON storage.objects
+  FOR SELECT USING (bucket_id = 'avatars');
+CREATE POLICY "Users can update own avatars" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'avatars' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+CREATE POLICY "Users can delete own avatars" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'avatars' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
 
 CREATE POLICY "Authenticated users can upload store logos" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'store-logos' AND auth.uid() IS NOT NULL);

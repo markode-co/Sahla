@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Bell, Home, Settings, ShoppingBag, User } from "lucide-react";
 import { AuthModal } from "@/components/store/auth-modal";
 import { StoreHeader } from "@/components/store/store-header";
-import { LogoutButton } from "@/components/store/logout-button";
+import { StoreNavigation } from "@/components/store/store-navigation";
 import type { Store, PaymentMethod } from "@/types";
 
 interface Props {
@@ -31,14 +29,6 @@ export default async function StoreLayout({ params, children }: Props) {
     .eq("store_id", store.id)
     .single();
 
-  const navItems = [
-    { href: `/store/${slug}`, label: "الرئيسية", icon: Home, requiresAuth: false },
-    { href: `/store/${slug}/orders`, label: "الطلبات", icon: ShoppingBag, requiresAuth: true },
-    { href: `/store/${slug}/notifications`, label: "الإشعارات", icon: Bell, requiresAuth: true },
-    { href: `/store/${slug}/profile`, label: "الملف الشخصي", icon: User, requiresAuth: true },
-    { href: `/store/${slug}/settings`, label: "الإعدادات", icon: Settings, requiresAuth: true },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <StoreHeader store={store} paymentMethod={paymentMethod} />
@@ -51,27 +41,12 @@ export default async function StoreLayout({ params, children }: Props) {
               <h1 className="text-lg font-semibold text-gray-900">{store.name}</h1>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-              <LogoutButton storeSlug={slug} storeCustomDomain={store.custom_domain} />
-            </div>
+            <StoreNavigation storeSlug={slug} storeCustomDomain={store.custom_domain} />
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">{children}</main>
     </div>
   );
 }

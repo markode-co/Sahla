@@ -12,6 +12,7 @@ import {
   Store,
   CreditCard,
   BarChart3,
+  Tag,
   ChevronLeft,
   ArrowRight,
   Menu,
@@ -38,6 +39,7 @@ interface SidebarProps {
 const merchantLinks = [
   { href: "/dashboard/merchant", label: "لوحة التحكم", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/merchant/products", label: "المنتجات", icon: Package },
+  { href: "/dashboard/merchant/promotions", label: "العروض", icon: Tag },
   { href: "/dashboard/merchant/orders", label: "الطلبات", icon: ShoppingCart },
   { href: "/dashboard/merchant/settings", label: "الإعدادات", icon: Settings },
 ];

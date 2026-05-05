@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatsCard } from "@/components/ui/stats-card";
-import { Package, ShoppingCart, TrendingUp, Clock, ExternalLink } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Clock, ExternalLink, Tag } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,10 @@ export default async function MerchantDashboard() {
 
   if (!store) redirect("/onboarding/store-setup");
 
-  const [productsRes, ordersRes] = await Promise.all([
+  const [productsRes, ordersRes, promotionsRes] = await Promise.all([
     supabase.from("products").select("id", { count: "exact" }).eq("store_id", store.id),
     supabase.from("orders").select("*").eq("store_id", store.id).order("created_at", { ascending: false }),
+    supabase.from("promotions").select("id", { count: "exact" }).eq("store_id", store.id),
   ]);
 
   const orders = ordersRes.data ?? [];
@@ -92,6 +93,12 @@ export default async function MerchantDashboard() {
           value={orders.length}
           icon={ShoppingCart}
           color="purple"
+        />
+        <StatsCard
+          title="العروض"
+          value={promotionsRes.count ?? 0}
+          icon={Tag}
+          color="teal"
         />
         <StatsCard
           title="طلبات معلقة"

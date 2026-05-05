@@ -1,10 +1,13 @@
 "use client";
 
+import { type MouseEvent } from "react";
 import Image from "next/image";
-import { ShoppingCart, Package } from "lucide-react";
+import Link from "next/link";
+import { Heart, ShoppingCart, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import toast from "react-hot-toast";
+import { useFavorites } from "@/hooks/use-favorites";
 import type { Product } from "@/types";
 
 interface ProductCardProps {
@@ -15,51 +18,75 @@ interface ProductCardProps {
 
 export function ProductCard({ product, storeId, storeSlug }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
+  const { isFavorite, toggleFavorite } = useFavorites(storeSlug);
+  const favorite = isFavorite(product.id);
 
   function handleAddToCart() {
     addItem(product, storeId, storeSlug);
     toast.success(`تمت إضافة ${product.name} للسلة`);
   }
 
+  const handleFavoriteClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleFavorite(product.id);
+  };
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group">
-      <div className="aspect-square relative bg-gray-50">
+    <div className="group relative overflow-hidden rounded-3xl border border-gray-100 bg-white transition-shadow hover:shadow-lg">
+      <div className="relative overflow-hidden bg-gray-50 h-56 sm:h-64">
+        <div className="absolute inset-0 z-0" />
+        <Link
+          href={`/store/${storeSlug}/product/${product.id}`}
+          className="absolute inset-0 z-10"
+          aria-label={`عرض تفاصيل ${product.name}`}
+        />
         {product.image_url ? (
           <Image
             src={product.image_url}
             alt={product.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-10 h-10 text-gray-200" />
+          <div className="flex h-full items-center justify-center bg-gray-100 text-gray-300">
+            <Package className="w-10 h-10" />
           </div>
         )}
+        <button
+          type="button"
+          onClick={handleFavoriteClick}
+          className="absolute right-3 top-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 text-gray-600 shadow-sm transition hover:bg-white"
+        >
+          <Heart
+            className="w-5 h-5"
+            fill={favorite ? "currentColor" : "none"}
+          />
+        </button>
       </div>
-      <div className="p-3">
-        <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2 leading-tight">
-          {product.name}
-        </h3>
+
+      <div className="p-4">
+        <Link href={`/store/${storeSlug}/product/${product.id}`}>
+          <h3 className="mb-2 text-sm font-semibold text-slate-900 line-clamp-2">{product.name}</h3>
+        </Link>
         {product.description && (
-          <p className="text-xs text-gray-400 mb-2 line-clamp-1">{product.description}</p>
+          <p className="text-xs text-slate-500 mb-3 line-clamp-1">{product.description}</p>
         )}
-        <div className="flex items-center justify-between mt-2">
-          <span className="font-bold text-primary-600 text-sm">
-            {formatCurrency(product.price)}
-          </span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-semibold text-primary-600">{formatCurrency(product.price)}</span>
           <button
+            type="button"
             onClick={handleAddToCart}
-            className="p-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-600 text-white transition hover:bg-primary-700"
           >
             <ShoppingCart className="w-4 h-4" />
           </button>
         </div>
         {product.stock <= 5 && product.stock > 0 && (
-          <p className="text-xs text-orange-500 mt-1">باقي {product.stock} فقط</p>
+          <p className="mt-3 text-xs text-orange-500">باقي {product.stock} فقط</p>
         )}
         {product.stock === 0 && (
-          <p className="text-xs text-red-500 mt-1">نفذت الكمية</p>
+          <p className="mt-3 text-xs text-red-500">نفذت الكمية</p>
         )}
       </div>
     </div>

@@ -3,23 +3,16 @@
 import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Bell, Clock, CheckCircle, AlertCircle, ShoppingBag, Truck } from "lucide-react";
+import { Bell, Clock, CheckCircle, AlertCircle, ShoppingBag, Truck, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 import { AuthModal } from "@/components/store/auth-modal";
+import type { Notification } from "@/types";
+import { markNotificationAsRead, deleteNotification } from "@/actions/notifications";
 
 interface Props {
   params: {
     slug: string;
   };
-}
-
-interface Notification {
-  id: string;
-  type: 'order_update' | 'promotion' | 'system';
-  title: string;
-  message: string;
-  read: boolean;
-  created_at: string;
-  order_id?: string;
 }
 
 function StoreNotificationsPage({ params }: Props) {
@@ -31,57 +24,58 @@ function StoreNotificationsPage({ params }: Props) {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
         setUser(data.user);
-        // Load mock notifications for demo
-        setNotifications([
-          {
-            id: '1',
-            type: 'order_update',
-            title: 'تم تأكيد طلبك',
-            message: 'طلبك رقم #12345 تم تأكيده وسيتم شحنه قريباً',
-            read: false,
-            created_at: new Date().toISOString(),
-            order_id: '12345'
-          },
-          {
-            id: '2',
-            type: 'promotion',
-            title: 'عرض خاص',
-            message: 'خصم 20% على جميع المنتجات الجديدة',
-            read: true,
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          },
-          {
-            id: '3',
-            type: 'system',
-            title: 'تحديث التطبيق',
-            message: 'تم تحديث التطبيق بميزات جديدة',
-            read: true,
-            created_at: new Date(Date.now() - 172800000).toISOString()
+        // Load real notifications from database
+        try {
+          const { data: notifs, error } = await supabase
+            .from("notifications")
+            .select("*")
+            .eq("user_id", data.user.id)
+            .order("created_at", { ascending: false });
+          
+          if (!error && notifs) {
+            setNotifications(notifs as Notification[]);
           }
-        ]);
+        } catch (err) {
+          console.error("Failed to load notifications:", err);
+        }
       }
       setLoading(false);
     });
   }, []);
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(notif =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (err) {
+      toast.error("فشل تحديث الإشعار");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteNotification(id);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      toast.success("تم حذف الإشعار");
+    } catch (err) {
+      toast.error("فشل حذف الإشعار");
+    }
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'order_update':
+      case "order_update":
         return <ShoppingBag className="w-5 h-5 text-blue-600" />;
-      case 'promotion':
+      case "promotion":
         return <AlertCircle className="w-5 h-5 text-green-600" />;
-      case 'system':
+      case "system":
         return <CheckCircle className="w-5 h-5 text-purple-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
@@ -158,9 +152,9 @@ function StoreNotificationsPage({ params }: Props) {
             <div
               key={notification.id}
               className={`card p-4 cursor-pointer transition-all ${
-                !notification.read ? 'border-l-4 border-l-primary-500 bg-primary-50' : ''
+                !notification.read ? "border-l-4 border-l-primary-500 bg-primary-50" : ""
               }`}
-              onClick={() => markAsRead(notification.id)}
+              onClick={() => !notification.read && handleMarkAsRead(notification.id)}
             >
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-1">
@@ -168,17 +162,30 @@ function StoreNotificationsPage({ params }: Props) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className={`font-semibold ${!notification.read ? 'text-primary-900' : 'text-gray-900'}`}>
+                    <h3 className={`font-semibold ${!notification.read ? "text-primary-900" : "text-gray-900"}`}>
                       {notification.title}
                     </h3>
-                    {!notification.read && (
-                      <div className="w-2 h-2 bg-primary-600 rounded-full flex-shrink-0"></div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-primary-600 rounded-full flex-shrink-0"></div>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(notification.id);
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-gray-600 mt-1">{notification.message}</p>
+                  {notification.message && (
+                    <p className="text-gray-600 mt-1">{notification.message}</p>
+                  )}
                   <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
                     <Clock className="w-3 h-3" />
-                    {new Date(notification.created_at).toLocaleDateString('ar-SA')}
+                    {new Date(notification.created_at).toLocaleDateString("ar-SA")}
                   </div>
                 </div>
               </div>

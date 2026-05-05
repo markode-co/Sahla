@@ -41,6 +41,32 @@ export interface Product {
   updated_at: string;
 }
 
+export interface Promotion {
+  id: string;
+  store_id: string;
+  title: string;
+  description: string | null;
+  discount_percent: number;
+  is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  store_id: string;
+  type: "order_update" | "promotion" | "system";
+  title: string;
+  message: string | null;
+  order_id: string | null;
+  read: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export type OrderStatus =
   | "pending"
   | "approved"
