@@ -64,7 +64,6 @@ export default async function StorePage({ params }: Props) {
             <h2 className="text-xl font-bold text-gray-900">المنتجات</h2>
             <p className="text-sm text-gray-500">{products?.length ?? 0} منتج متاح</p>
           </div>
-          <CartButton storeSlug={slug} />
         </div>
 
         <ProductGrid
@@ -72,6 +71,10 @@ export default async function StorePage({ params }: Props) {
           storeId={store.id}
           storeSlug={store.slug}
         />
+      </div>
+
+      <div className="fixed bottom-4 right-4 z-40">
+        <CartButton storeSlug={slug} />
       </div>
     </div>
   );

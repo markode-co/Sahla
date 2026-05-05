@@ -9,6 +9,17 @@ export async function GET(request: NextRequest) {
     // Get store slug from query params or referrer
     const url = new URL(request.url);
     const storeSlug = url.searchParams.get("store");
+    const currentHostname = url.hostname;
+    const appHostnames = new Set<string>(["localhost", "127.0.0.1"]);
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      try {
+        appHostnames.add(new URL(process.env.NEXT_PUBLIC_SITE_URL).hostname);
+      } catch (error) {}
+    }
+    if (process.env.NEXT_PUBLIC_APP_HOSTNAME) {
+      appHostnames.add(process.env.NEXT_PUBLIC_APP_HOSTNAME);
+    }
+    const isCustomDomain = !appHostnames.has(currentHostname);
 
     let store = null;
     let role = "customer";
@@ -35,6 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If we have a store slug, get that store (for customer view)
+    let shouldPromptLogin = false;
     if (storeSlug && !store) {
       const { data: slugStore } = await supabase
         .from("stores")
@@ -47,8 +59,12 @@ export async function GET(request: NextRequest) {
       role = "customer";
     }
 
+    if (storeSlug && !user) {
+      shouldPromptLogin = true;
+    }
+
     // Generate manifest based on store data
-    const manifest = generateManifest(store, role);
+    const manifest = generateManifest(store, role, shouldPromptLogin, isCustomDomain);
 
     return new NextResponse(JSON.stringify(manifest, null, 2), {
       headers: {
@@ -68,7 +84,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateManifest(store: any, role: string) {
+function generateManifest(store: any, role: string, promptLogin = false, isCustomDomain = false) {
   const isMerchant = role === "merchant";
 
   // Default values
@@ -98,7 +114,15 @@ function generateManifest(store: any, role: string) {
     name = isMerchant ? `${store.name} - لوحة التحكم` : store.name;
     shortName = store.name.length > 12 ? store.name.substring(0, 12) : store.name;
     description = store.description || (isMerchant ? `إدارة ${store.name}` : `تسوق من ${store.name}`);
-    startUrl = isMerchant ? "/dashboard" : `/store/${store.slug}`;
+    startUrl = isMerchant
+      ? "/dashboard"
+      : promptLogin
+      ? isCustomDomain
+        ? "/login?next=/"
+        : `/store/${store.slug}/login?next=/store/${store.slug}`
+      : isCustomDomain
+      ? "/"
+      : `/store/${store.slug}`;
 
     // Use store colors if available
     if (store.logo_color) {

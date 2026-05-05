@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
+import { GoogleButton } from "@/components/ui/google-button";
 
 interface Props {
   params: {
@@ -22,6 +23,7 @@ function StoreLoginForm({ storeSlug }: { storeSlug: string }) {
 
   const next = searchParams.get("next");
   const safeNext = next && next.startsWith("/") ? next : `/store/${storeSlug}`;
+  const oauthError = searchParams.get("error");
 
   useEffect(() => {
     const supabase = createClient();
@@ -71,6 +73,20 @@ function StoreLoginForm({ storeSlug }: { storeSlug: string }) {
         </div>
 
         <div className="card p-8">
+          {oauthError && (
+            <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+              فشل تسجيل الدخول عبر جوجل. يرجى المحاولة مجدداً.
+            </div>
+          )}
+
+          <GoogleButton label="الدخول بحساب جوجل" />
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">أو بالبريد الإلكتروني</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="label">البريد الإلكتروني</label>

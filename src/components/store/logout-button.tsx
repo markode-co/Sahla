@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 
 interface LogoutButtonProps {
   storeSlug: string;
+  storeCustomDomain?: string | null;
 }
 
-export function LogoutButton({ storeSlug }: LogoutButtonProps) {
+export function LogoutButton({ storeSlug, storeCustomDomain }: LogoutButtonProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
 
@@ -18,8 +19,9 @@ export function LogoutButton({ storeSlug }: LogoutButtonProps) {
       setIsLoggingOut(true);
       const supabase = createClient();
       await supabase.auth.signOut();
-      // Redirect to store page after logout
-      router.push(`/store/${storeSlug}`);
+      // Redirect to the store page after logout.
+      const redirectUrl = storeCustomDomain ? "/" : `/store/${storeSlug}`;
+      router.push(redirectUrl);
       router.refresh();
     } catch (error) {
       console.error("Logout error:", error);

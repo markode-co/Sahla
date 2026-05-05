@@ -6,10 +6,25 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next");
-  const safeNext = next && next.startsWith("/") ? next : "/dashboard/merchant";
+  const safeNext = next && next.startsWith("/") ? next : "/";
+
+  const getLoginRedirectUrl = () => {
+    if (!safeNext.startsWith("/store/")) {
+      return `${origin}/login`;
+    }
+
+    const segments = safeNext.split("/").filter(Boolean);
+    if (segments.length < 2) {
+      return `${origin}/login`;
+    }
+
+    return `${origin}/store/${segments[1]}/login`;
+  };
+
+  const loginRedirectUrl = `${getLoginRedirectUrl()}?error=`;
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+    return NextResponse.redirect(`${loginRedirectUrl}missing_code&next=${encodeURIComponent(safeNext)}`);
   }
 
   const cookieStore = await cookies();
@@ -34,7 +49,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
+    return NextResponse.redirect(`${loginRedirectUrl}oauth_failed&next=${encodeURIComponent(safeNext)}`);
   }
 
   const user = data.user;
@@ -46,24 +61,24 @@ export async function GET(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  // If profile doesn't exist yet (race condition), insert it
+  const insertRole = safeNext.startsWith("/store/") ? "customer" : "merchant";
+
   if (!profile) {
     await supabase.from("users").insert({
       id: user.id,
       email: user.email!,
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
       phone: user.user_metadata?.phone ?? null,
-      role: "merchant",
+      role: insertRole,
     });
   }
 
-  const role = profile?.role ?? "merchant";
+  const role = profile?.role ?? insertRole;
   let redirectPath = safeNext;
 
   if (role === "admin") {
     redirectPath = "/dashboard/admin";
-  } else {
-    // Check if merchant already has a store
+  } else if (role === "merchant") {
     const { data: store } = await supabase
       .from("stores")
       .select("id")
@@ -73,7 +88,6 @@ export async function GET(request: NextRequest) {
     if (!store) {
       redirectPath = "/onboarding/store-setup";
     } else {
-      // Check subscription
       const { data: subscription } = await supabase
         .from("subscriptions")
         .select("status")

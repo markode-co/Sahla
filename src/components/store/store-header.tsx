@@ -45,8 +45,9 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
       setIsLoggingOut(true);
       const supabase = createClient();
       await supabase.auth.signOut();
-      // Redirect to store page after logout
-      window.location.href = `/store/${store.slug}`;
+      // Redirect to the right store URL after logout.
+      const redirectUrl = store.custom_domain ? "/" : `/store/${store.slug}`;
+      window.location.href = redirectUrl;
     } catch (error) {
       console.error("Logout error:", error);
       setIsLoggingOut(false);
@@ -125,16 +126,6 @@ export function StoreHeader({ store, paymentMethod }: StoreHeaderProps) {
                   أنشئ حسابًا
                 </Link>
               </div>
-            )}
-            {session && (
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <LogOut className="w-4 h-4" />
-                {isLoggingOut ? "جاري الخروج..." : "تسجيل الخروج"}
-              </button>
             )}
             {!isAppInstalledState && (
               <button

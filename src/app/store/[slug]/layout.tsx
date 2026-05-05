@@ -65,7 +65,7 @@ export default async function StoreLayout({ params, children }: Props) {
                   </Link>
                 );
               })}
-              <LogoutButton storeSlug={slug} />
+              <LogoutButton storeSlug={slug} storeCustomDomain={store.custom_domain} />
             </div>
           </div>
         </div>
